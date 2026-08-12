@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Verify tag is on main
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - name: Verify package version matches tag
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFileSync } from "node:fs";
+
+          const tag = process.env.GITHUB_REF_NAME;
+          const version = tag?.startsWith("v") ? tag.slice(1) : undefined;
+          const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+
+          if (!version || packageJson.version !== version) {
+            throw new Error(`Tag ${tag} does not match ${packageJson.name}@${packageJson.version}`);
+          }
+          EOF
+      - run: npm run check
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Pack tarball
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+      - name: Test packaged import
+        run: |
+          smoke_directory=$(mktemp -d)
+          cd "$smoke_directory"
+          npm init -y >/dev/null
+          npm install "$RUNNER_TEMP"/supermemory-eve-*.tgz eve@0.31.3
+          node --input-type=module --eval 'import("@supermemory/eve").then((module) => { if (typeof module.default !== "function") process.exit(1); })'
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "NPM_TOKEN is required to publish" >&2
+            exit 1
+          fi
+
+          npm publish --access public

@@ -1,0 +1,57 @@
+{
+  "name": "@supermemory/eve",
+  "version": "0.1.0",
+  "description": "Durable user context, retrieval, extraction, remembering, and forgetting for Eve agents.",
+  "type": "module",
+  "eve": {
+    "extension": {
+      "source": "./extension",
+      "dist": "./dist/extension"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "agents",
+    "eve",
+    "memory",
+    "supermemory"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.mjs"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "default": "./dist/tools/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "eve extension build",
+    "check": "biome ci extension",
+    "format": "biome format --write extension",
+    "prepare": "eve extension build",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "supermemory": "^4.25.4",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.7",
+    "@types/node": "24.x",
+    "eve": "0.31.3",
+    "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "eve": "*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
