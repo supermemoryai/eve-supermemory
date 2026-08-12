@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["extension/**/*.ts"]
+  "include": ["extension/**/*.ts", "tests/e2e/**/*.ts"]
 }

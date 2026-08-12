@@ -1,0 +1,9 @@
+Northstar vendor migration brief
+
+The production migration freeze begins on October 14 at 6:00 PM Pacific. During
+the freeze, the support team should route urgent customer-impacting changes to
+the incident channel instead of deploying them directly.
+
+Priya Nair owns the rollback decision. The database team should preserve the
+pre-migration snapshot until Priya confirms that the first integrity check has
+passed.
