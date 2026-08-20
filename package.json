@@ -30,8 +30,8 @@
   },
   "scripts": {
     "build": "eve extension build",
-    "check": "biome ci extension",
-    "format": "biome format --write extension",
+    "check": "biome ci extension tests/e2e",
+    "format": "biome format --write extension tests/e2e",
     "prepare": "eve extension build",
     "typecheck": "tsc"
   },
