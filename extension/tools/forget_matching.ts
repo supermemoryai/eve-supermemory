@@ -5,7 +5,7 @@ import { forgetMatchingMemories } from "../lib/forget-matching";
 
 export default defineTool({
   description:
-    "Preview semantic matches for a broad forget request or finalize a previously previewed set of exact memory IDs. Finalization requires user approval.",
+    "Preview semantic matches for a broad forget request or finalize a user-confirmed preview using its exact memory IDs.",
   inputSchema: z.object({
     query: z
       .string()
@@ -19,7 +19,7 @@ export default defineTool({
       .boolean()
       .default(true)
       .describe(
-        "Use true to preview without changing anything. Use false only to finalize the exact IDs from that preview.",
+        "Use true to preview without changing anything. Use false only after the user confirms the exact IDs from that preview.",
       ),
     ids: z
       .array(z.string().trim().min(1).max(200))
@@ -50,7 +50,6 @@ export default defineTool({
       .optional()
       .describe("An optional short reason recorded when memories are forgotten."),
   }),
-  approval: ({ toolInput }) => (toolInput?.dryRun === false ? "user-approval" : "not-applicable"),
   execute(input, ctx) {
     return forgetMatchingMemories(input, ctx);
   },

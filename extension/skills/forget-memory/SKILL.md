@@ -33,11 +33,11 @@ or use the matching flow when the user wants the whole group removed.
 
 1. Call `__forget_matching` with `dryRun: true` and a precise description of
    the complete boundary. This changes nothing.
-2. Show the candidate count and enough candidate detail for the user to verify
-   what will be removed.
-3. Finalize with the same tool, `dryRun: false`, and the exact
-   `candidates[].id` values from the preview. Eve's approval request is the
-   confirmation boundary.
+2. Show the candidate count and enough candidate detail in `ask_question` for
+   the user to choose whether to proceed.
+3. Only when the user confirms, finalize with the same tool, `dryRun: false`,
+   and the exact `candidates[].id` values from the preview. Their answer to
+   `ask_question` is the complete confirmation boundary.
 4. Report the finalized count.
 
 This workflow removes derived memory entries. Source-document deletion is a
