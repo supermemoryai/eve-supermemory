@@ -4,19 +4,28 @@ Memory for [Eve](https://eve.dev) agents, powered by
 [Supermemory](https://supermemory.ai).
 
 `@supermemory/eve` gives an agent continuity across sessions without making it call `remember`
-after every message. It captures conversations, restores useful context, and gives the agent
-deliberate ways to search, remember, extract, and forget.
+after every message. It captures conversations, retrieves relevant context, and gives the agent
+ways to search, remember, extract, and forget.
 
 ```bash
 npm install @supermemory/eve
 ```
 
-```ts
-// agent/extensions/supermemory.ts
-import supermemory from "@supermemory/eve";
+Create a memory slot in the consuming Eve agent. `supermemory(...)` configures the provider;
+`defineMemory(...)` binds it to an Eve-managed scope.
 
-export default supermemory({
-  apiKey: process.env.SUPERMEMORY_API_KEY!,
+```ts
+// agent/memory/supermemory.ts
+import supermemory from "@supermemory/eve";
+import { defineMemory } from "eve/memory";
+import { byPrincipal } from "eve/memory/scope";
+
+export default defineMemory({
+  description: "Recall and manage durable context for the current user.",
+  provider: supermemory({
+    apiKey: process.env.SUPERMEMORY_API_KEY!,
+  }),
+  scope: byPrincipal,
 });
 ```
 
@@ -26,7 +35,7 @@ export default supermemory({
 flowchart LR
   U[User] <--> E["Eve agent"]
 
-  subgraph SM["Supermemory · one container tag per user"]
+  subgraph SM["Supermemory · one container tag per memory scope"]
     S["Session documents<br/>one document per agent session"]
     D["Source documents<br/>files, URLs, audio, video, and text"]
     M["Memories<br/>identity, preferences, decisions, and project context"]
@@ -36,7 +45,7 @@ flowchart LR
 
   E -->|completed turns| S
   E -->|extract a source| D
-  M -->|profile context at session start| E
+  M -->|relevant context before each turn| E
   E <-->|search · read| S
   E <-->|extract · read| D
   E <-->|remember · forget| M
@@ -47,14 +56,13 @@ failed or cancelled turns are not. Source documents hold material that SuperRAG 
 transcribed for later reading. Memories are the smaller durable facts and decisions Supermemory
 forms from those documents.
 
-The container tag comes from Eve's verified caller identity. It is not chosen by the model, so two
-users of the same agent do not share context. The same model works for a personal assistant, an
-autonomous worker, a research agent, or a recursive agent: the architecture of the agent can change
-without changing the memory primitives.
+The container tag comes from Eve's opaque, locked memory-scope key. It is not chosen by the model.
+The application decides whether that scope represents one user, a workspace, or another trusted
+boundary; the provider uses the same key for every read and write.
 
 ## Automatic continuity
 
-After each successful turn, the extension appends the user and assistant messages to that session's
+After each successful turn, the provider appends the user and assistant messages to that session's
 document. Failed and cancelled turns are discarded. Supermemory forms durable memories from
 user-grounded details such as preferences, relationships, goals, decisions, constraints, and
 ongoing work.
@@ -62,22 +70,24 @@ ongoing work.
 When a turn uses a Supermemory tool, retrieved material is marked as existing context. It cannot be
 learned again from the assistant's response.
 
-At the start of the next session, the agent receives a bounded profile with stable user details,
-recent memories, and recent session summaries. Deeper retrieval stays on demand.
+Before each turn, automatic search retrieves context relevant to the current request. It uses the
+same locked scope as capture and can be disabled in provider configuration. The agent can still use
+the search and read tools when it needs broader or source-level context.
 
 ## Agent-directed memory
 
-Skills describe the workflow. Tools perform the operation.
+The provider exposes a small set of scope-bound tools for searching, reading, remembering,
+extracting, and forgetting context.
 
-| Skill | Tools | Used for |
+| Workflow | Tools | Used for |
 | --- | --- | --- |
-| `search-memory` | `search`, `read_session`, `read_document` | Search compact results first, then read the full session or source only when the task needs it. |
-| `remember-context` | `remember` | Save an explicit request, preference, decision, project state, or reusable correction as one standalone memory. |
-| `extract-sources` | `extract`, `read_document` | Use SuperRAG to parse, transcribe, index, and selectively read large or unsupported sources. |
-| `forget-memory` | `search`, `forget`, `forget_matching` | Remove one exact memory, or preview and confirm the precise set for a broader request. |
+| Search | `search`, `read_session`, `read_document` | Search compact results first, then read the full session or source only when the task needs it. |
+| Remember | `remember` | Save an explicit request, preference, decision, project state, or reusable correction as one standalone memory. |
+| Extract | `extract`, `read_document` | Use SuperRAG to parse, transcribe, index, and selectively read large or unsupported sources. |
+| Forget | `search`, `forget`, `forget_matching` | Remove one exact memory, or preview and confirm the precise set for a broader request. |
 
-Mounting the extension as `supermemory.ts` adds the `supermemory__` namespace, so `search` becomes
-`supermemory__search` and `search-memory` becomes `supermemory__search-memory`.
+Naming the memory slot `supermemory.ts` gives its provider tools the `supermemory__` namespace, so
+`search` becomes `supermemory__search`.
 
 Source-backed memories keep the useful synthesis and the source document ID. The agent can answer
 from the memory when it is enough and return to the original evidence when it is not.
@@ -87,28 +97,30 @@ from the memory when it is enough and return to the original evidence when it is
 - Capture does not depend on the model remembering to remember.
 - Session documents preserve what was actually said; memories preserve what remains useful.
 - Source documents stay available without occupying the agent's full context window.
-- Skills leave retrieval and fallback decisions visible to the agent instead of hiding them in the
-  extension.
+- Automatic search handles routine recall while tools support deliberate retrieval and changes.
 - Identity and storage routing stay under developer control.
 - Broad deletion always exposes the affected memories before changing them.
 
 ## Configuration
 
-The API key is the only required option. Capture behavior and profile rendering can be adjusted at
-the extension mount:
+Provider options are passed to `supermemory(...)` inside the memory slot. Automatic search and
+capture are enabled by default and can be disabled independently:
 
 ```ts
-export default supermemory({
-  apiKey: process.env.SUPERMEMORY_API_KEY!,
-  containerTagPrefix: "agent",
-  profileContext: {
-    timeZone: "America/Los_Angeles",
-  },
-  capture: {
-    enabled: true,
-    dreaming: "dynamic",
-    metadata: {},
-  },
+export default defineMemory({
+  provider: supermemory({
+    apiKey: process.env.SUPERMEMORY_API_KEY!,
+    containerTagPrefix: "eve_agent",
+    autoSearch: {
+      enabled: true,
+    },
+    capture: {
+      enabled: true,
+      dreaming: "dynamic",
+      metadata: {},
+    },
+  }),
+  scope: byPrincipal,
 });
 ```
 

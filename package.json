@@ -3,12 +3,6 @@
   "version": "0.1.0",
   "description": "Durable user context, retrieval, extraction, remembering, and forgetting for Eve agents.",
   "type": "module",
-  "eve": {
-    "extension": {
-      "source": "./extension",
-      "dist": "./dist/extension"
-    }
-  },
   "files": [
     "dist"
   ],
@@ -21,19 +15,18 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.mjs"
-    },
-    "./tools": {
-      "types": "./dist/tools/index.d.ts",
-      "default": "./dist/tools/index.mjs"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "eve extension build",
-    "check": "biome ci extension",
-    "format": "biome format --write extension",
-    "prepare": "eve extension build",
-    "typecheck": "tsc"
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "prebuild": "npm run clean",
+    "build": "tsc -p tsconfig.build.json",
+    "check": "biome ci src",
+    "format": "biome format --write src",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "supermemory": "^4.25.4",
@@ -42,11 +35,11 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
     "@types/node": "24.x",
-    "eve": "0.31.3",
+    "eve": "0.47.3",
     "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "eve": "*"
+    "eve": "^0.47.3"
   },
   "publishConfig": {
     "access": "public"
