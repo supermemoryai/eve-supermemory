@@ -1,11 +1,13 @@
-# @supermemory/eve
+# Supermemory for Eve
 
-Memory for [Eve](https://eve.dev) agents, powered by
+`@supermemory/eve` is the first third-party implementation of
+[Eve's memory-provider contract](https://eve.dev/docs/memory), powered by
 [Supermemory](https://supermemory.ai).
 
-`@supermemory/eve` gives an agent continuity across sessions without making it call `remember`
-after every message. It captures conversations, retrieves relevant context, and gives the agent
-ways to search, remember, extract, and forget.
+Once mounted, it captures completed conversations, recalls useful context before each turn, and
+gives Eve tools to search, remember, extract, and forget.
+
+## Add memory to Eve
 
 ```bash
 npm install @supermemory/eve
@@ -21,6 +23,7 @@ import { defineMemory } from "eve/memory";
 import { byPrincipal } from "eve/memory/scope";
 
 export default defineMemory({
+  namespace: "your-company-agent-v1",
   description: "Recall and manage durable context for the current user.",
   provider: supermemory({
     apiKey: process.env.SUPERMEMORY_API_KEY!,
@@ -28,6 +31,10 @@ export default defineMemory({
   scope: byPrincipal,
 });
 ```
+
+Pick a namespace for the agent and keep it stable. If it changes, Eve sees a different memory space.
+`description` is added to the tool descriptions the model sees, so keep it short and say what this
+memory is for.
 
 ## How it works
 
@@ -56,9 +63,10 @@ failed or cancelled turns are not. Source documents hold material that SuperRAG 
 transcribed for later reading. Memories are the smaller durable facts and decisions Supermemory
 forms from those documents.
 
-The container tag comes from Eve's opaque, locked memory-scope key. It is not chosen by the model.
-The application decides whether that scope represents one user, a workspace, or another trusted
-boundary; the provider uses the same key for every read and write.
+Eve combines the slot's namespace and trusted scope into an opaque, locked memory-scope key. The
+provider derives its container tag from that key and uses it for every read and write. The
+application decides whether the scope represents one user, a workspace, or another trusted
+boundary; the model cannot choose or change it.
 
 ## Automatic continuity
 
@@ -70,9 +78,9 @@ ongoing work.
 When a turn uses a Supermemory tool, retrieved material is marked as existing context. It cannot be
 learned again from the assistant's response.
 
-Before each turn, automatic search retrieves context relevant to the current request. It uses the
-same locked scope as capture and can be disabled in provider configuration. The agent can still use
-the search and read tools when it needs broader or source-level context.
+Before each turn, the provider loads the user's current Supermemory profile and automatically
+searches for context relevant to the request. Eve runs recall again after context compaction. The
+agent can still use the search and read tools when it needs broader or source-level context.
 
 ## Agent-directed memory
 
@@ -103,11 +111,14 @@ from the memory when it is enough and return to the original evidence when it is
 
 ## Configuration
 
-Provider options are passed to `supermemory(...)` inside the memory slot. Automatic search and
-capture are enabled by default and can be disabled independently:
+The namespace, description, and scope belong to the Eve memory slot. Provider options are passed to
+`supermemory(...)`. Automatic search and capture are enabled by default and can be disabled
+independently:
 
 ```ts
 export default defineMemory({
+  namespace: "your-company-agent-v1",
+  description: "Recall and manage durable context for the current user.",
   provider: supermemory({
     apiKey: process.env.SUPERMEMORY_API_KEY!,
     containerTagPrefix: "eve_agent",
@@ -127,6 +138,30 @@ export default defineMemory({
 `capture.entityContext` can replace the default definition of durable context for products that
 need a different memory policy. The model cannot change caller identity, container routing, or
 capture policy at runtime.
+
+## Frequently asked questions
+
+### How do I add memory to Eve?
+
+Install `@supermemory/eve`, get an API key from the
+[Supermemory console](https://console.supermemory.ai), and add the memory file shown above. That's
+it. Eve loads Supermemory as its memory provider.
+
+### Why should I add memory to Eve?
+
+Without memory, a new session starts over. Supermemory carries forward things like preferences,
+decisions, project context, and earlier conversations so the agent can pick up where it left off.
+
+### Does Eve remember conversations automatically?
+
+With Supermemory installed, yes. Completed turns are captured automatically and useful context is
+extracted from them. Failed and cancelled turns are ignored.
+
+### How do I add RAG to an Eve agent?
+
+Install the same provider. SuperRAG handles PDFs, URLs, images, audio, video, and text, so the agent
+can index a source, search it later, and return to the original document when it needs more detail.
+There is no separate RAG setup.
 
 ## Development
 
