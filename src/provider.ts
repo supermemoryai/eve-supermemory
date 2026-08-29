@@ -17,7 +17,6 @@ import { createSupermemoryTools } from "./tools/index.js";
 
 const PROFILE_CONTEXT_ID = "supermemory-profile-context";
 const AUTO_SEARCH_CONTEXT_ID = "supermemory-auto-search";
-const PROFILE_CONTEXT_ENABLED = false;
 
 type RecallContext = MemoryTurnStartedContext | MemoryCompactionCompletedContext;
 
@@ -35,22 +34,20 @@ export function supermemory(options: SupermemoryOptions): MemoryProvider {
   const recall = async (context: RecallContext) => {
     const messages: MemoryRecallMessage[] = [];
 
-    if (PROFILE_CONTEXT_ENABLED) {
-      try {
-        const content = await loadProfileContext({
-          abortSignal: context.abortSignal,
-          client,
-          containerTag: dependencies(context.memory.scope.key).containerTags.context,
-          timeZone: config.profileContext.timeZone,
-        });
+    try {
+      const content = await loadProfileContext({
+        abortSignal: context.abortSignal,
+        client,
+        containerTag: dependencies(context.memory.scope.key).containerTags.context,
+        timeZone: config.profileContext.timeZone,
+      });
 
-        messages.push({ content, id: PROFILE_CONTEXT_ID });
-      } catch (error) {
-        console.error("[@supermemory/eve] profile context failed", {
-          error: errorMessage(error),
-          sessionId: context.session.id,
-        });
-      }
+      messages.push({ content, id: PROFILE_CONTEXT_ID });
+    } catch (error) {
+      console.error("[@supermemory/eve] profile context failed", {
+        error: errorMessage(error),
+        sessionId: context.session.id,
+      });
     }
 
     if (config.autoSearch.enabled && context.turn) {
