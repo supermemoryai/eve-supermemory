@@ -63,8 +63,9 @@ export async function captureCompletedTurn(
   const sourceId = `conv_${context.session.id}`;
 
   try {
+    const client = await dependencies.getClient();
     await addDocument(
-      dependencies.client,
+      client,
       {
         containerTag: dependencies.containerTags.context,
         content,

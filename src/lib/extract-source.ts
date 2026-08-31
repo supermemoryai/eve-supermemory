@@ -51,7 +51,8 @@ export async function extractSource(
   ctx: ToolContext,
   dependencies: SupermemoryDependencies,
 ) {
-  const { client, containerTags } = dependencies;
+  const client = await dependencies.getClient();
+  const { containerTags } = dependencies;
   const metadata = extractionMetadata(input, ctx);
 
   if (input.kind === "file") {

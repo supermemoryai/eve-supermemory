@@ -17,10 +17,11 @@ export async function rememberContext(
   const conversationId = `conv_${ctx.session.id}`;
   const requestedSourceDocumentId = input.sourceDocumentId?.trim();
   let sourceDocumentId: string | undefined;
+  const client = await dependencies.getClient();
 
   if (requestedSourceDocumentId) {
     const source = await accessibleDocument(
-      dependencies.client,
+      client,
       requestedSourceDocumentId,
       dependencies.containerTags.extraction,
       ctx.abortSignal,
@@ -35,7 +36,7 @@ export async function rememberContext(
   }
 
   const result = await addDocument(
-    dependencies.client,
+    client,
     {
       containerTag: dependencies.containerTags.context,
       content: input.memory,

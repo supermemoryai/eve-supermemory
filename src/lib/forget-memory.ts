@@ -7,12 +7,13 @@ export type ForgetMemoryInput = {
   reason?: string;
 };
 
-export function forgetMemory(
+export async function forgetMemory(
   input: ForgetMemoryInput,
   ctx: ToolContext,
   dependencies: SupermemoryDependencies,
 ) {
-  return dependencies.client.memories.forget(
+  const client = await dependencies.getClient();
+  return client.memories.forget(
     {
       containerTag: dependencies.containerTags.context,
       id: input.memoryId,

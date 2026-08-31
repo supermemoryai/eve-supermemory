@@ -8,7 +8,7 @@ import {
 
 import { EMPTY_AUTO_SEARCH_CONTEXT, loadAutoSearchContext } from "./lib/auto-search.js";
 import { captureCompletedTurn } from "./lib/capture-conversation.js";
-import { createSupermemoryClient } from "./lib/client.js";
+import { createSupermemoryClientFactory } from "./lib/client.js";
 import { resolveContainerTags } from "./lib/container-tags.js";
 import type { SupermemoryDependencies } from "./lib/dependencies.js";
 import { loadProfileContext } from "./lib/profile-context.js";
@@ -26,19 +26,20 @@ function errorMessage(error: unknown): string {
 
 export function supermemory(options: SupermemoryOptions): MemoryProvider {
   const config = resolveOptions(options);
-  const client = createSupermemoryClient(config.apiKey);
+  const getClient = createSupermemoryClientFactory(config.apiKey);
   const dependencies = (scopeKey: string): SupermemoryDependencies => ({
-    client,
+    getClient,
     containerTags: resolveContainerTags(scopeKey, config.containerTagPrefix),
   });
   const recall = async (context: RecallContext) => {
     const messages: MemoryRecallMessage[] = [];
 
     try {
+      const memory = dependencies(context.memory.scope.key);
       const content = await loadProfileContext({
         abortSignal: context.abortSignal,
-        client,
-        containerTag: dependencies(context.memory.scope.key).containerTags.context,
+        client: await memory.getClient(),
+        containerTag: memory.containerTags.context,
         timeZone: config.profileContext.timeZone,
       });
 

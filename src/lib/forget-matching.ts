@@ -49,8 +49,9 @@ export async function forgetMatchingMemories(
     throw new Error("Finalizing requires the exact candidate IDs returned by a dry-run preview.");
   }
 
+  const client = await dependencies.getClient();
   return forgetMatchingResponseSchema.parse(
-    await dependencies.client.post<unknown>("/v4/memories/forget-matching", {
+    await client.post<unknown>("/v4/memories/forget-matching", {
       body: {
         ...(query ? { query } : {}),
         containerTag: dependencies.containerTags.context,
