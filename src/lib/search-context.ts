@@ -34,7 +34,8 @@ export async function searchStoredContext(
     filters.push({ key: "source_id", value: input.customId });
   }
 
-  return dependencies.client.search(
+  const client = await dependencies.getClient();
+  return client.search(
     {
       q: input.query,
       containerTag: dependencies.containerTags.context,

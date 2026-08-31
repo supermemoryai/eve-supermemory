@@ -60,12 +60,8 @@ export async function readStoredDocument(
     container === "agent_extraction"
       ? dependencies.containerTags.extraction
       : dependencies.containerTags.context;
-  const document = await accessibleDocument(
-    dependencies.client,
-    documentId,
-    containerTag,
-    ctx.abortSignal,
-  );
+  const client = await dependencies.getClient();
+  const document = await accessibleDocument(client, documentId, containerTag, ctx.abortSignal);
   const details = {
     id: document.id,
     customId: document.customId,
