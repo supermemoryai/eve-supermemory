@@ -4,7 +4,7 @@ This package exports a first-class Eve memory provider. A consuming agent binds
 it to a trusted scope in `agent/memory/<slot>.ts` with `defineMemory`.
 
 Before writing code, read the Memory guide from the installed Eve package docs
-at `node_modules/eve/docs/memory.md`. If package docs are unavailable, use
+at `node_modules/eve/docs/memory/overview.mdx`. If package docs are unavailable, use
 https://eve.dev/docs/memory as a fallback.
 
 ## Authoring
