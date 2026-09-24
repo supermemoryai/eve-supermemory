@@ -9,9 +9,20 @@ gives Eve tools to search, remember, extract, and forget.
 
 ## Add memory to Eve
 
+From an Eve project, add the provider from Eve's integration registry:
+
+```bash
+eve add memory/supermemory
+```
+
+Or install it yourself:
+
 ```bash
 npm install @supermemory/eve
 ```
+
+The provider supports Eve 0.47.3 and newer 0.x releases. Set `SUPERMEMORY_API_KEY` from the
+[Supermemory console](https://console.supermemory.ai).
 
 Create a memory slot in the consuming Eve agent. `supermemory(...)` configures the provider;
 `defineMemory(...)` binds it to an Eve-managed scope.
@@ -26,11 +37,14 @@ export default defineMemory({
   namespace: "your-company-agent-v1",
   description: "Recall and manage durable context for the current user.",
   provider: supermemory({
-    apiKey: process.env.SUPERMEMORY_API_KEY!,
+    apiKey: () => process.env.SUPERMEMORY_API_KEY!,
   }),
   scope: byPrincipal,
 });
 ```
+
+Pass `apiKey` as a function so the key is read when the agent runs, not when `eve build` loads the
+slot. A plain string also works, but then the key must be set in the build environment too.
 
 Pick a namespace for the agent and keep it stable. If it changes, Eve sees a different memory space.
 `description` is added to the tool descriptions the model sees, so keep it short and say what this
@@ -120,7 +134,7 @@ export default defineMemory({
   namespace: "your-company-agent-v1",
   description: "Recall and manage durable context for the current user.",
   provider: supermemory({
-    apiKey: process.env.SUPERMEMORY_API_KEY!,
+    apiKey: () => process.env.SUPERMEMORY_API_KEY!,
     containerTagPrefix: "eve_agent",
     autoSearch: {
       enabled: true,

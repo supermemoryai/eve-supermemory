@@ -1,6 +1,6 @@
 {
   "name": "@supermemory/eve",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Durable user context, retrieval, extraction, remembering, and forgetting for Eve agents.",
   "type": "module",
   "files": [
@@ -35,11 +35,11 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
     "@types/node": "24.x",
-    "eve": "0.47.3",
+    "eve": "0.66.1",
     "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "eve": "^0.47.3"
+    "eve": ">=0.47.3 <1"
   },
   "publishConfig": {
     "access": "public"
