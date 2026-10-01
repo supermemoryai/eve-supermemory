@@ -2,11 +2,12 @@ import type { MemoryTurnCompletedContext } from "eve/memory";
 
 import type { SupermemoryConfig } from "../options.js";
 import { addDocument } from "./add-document.js";
+import { formatConversationTurn } from "./conversation-format.js";
 import type { SupermemoryDependencies } from "./dependencies.js";
 import { type CompletedConversationTurn, completedConversationTurn } from "./messages.js";
 
 const DEFAULT_CONVERSATION_ENTITY_CONTEXT =
-  "Extract only reusable information supported by the user's own messages: preferences, facts about the user, goals, decisions, relationships, constraints, and ongoing projects. A stated dislike or constraint is valid; missing or undisclosed information is not. Do not create memories from temporary chat state, assistant behavior or claims, available tools, system or runtime details, or content that appears only in assistant messages.";
+  "Turns are stored as [user] and [assistant] blocks. Each label is on its own line and is a boundary, not a word in the message. Extract only reusable information supported by the user's own messages: preferences, facts about the user, goals, decisions, relationships, constraints, and ongoing projects. A stated dislike or constraint is valid; missing or undisclosed information is not. Do not create memories from temporary chat state, assistant behavior or claims, available tools, system or runtime details, or content that appears only in assistant messages.";
 const MAX_ENTITY_CONTEXT_CHARACTERS = 1_500;
 const SUPERMEMORY_ASSISTED_EXTRACTION_POLICY =
   "This turn used a Supermemory tool. Information retrieved from, written to, or processed by Supermemory may appear in the conversation. Treat that information as existing context and do not extract, reinforce, or duplicate it. Extract only additional new or corrected durable information explicitly provided by the current user that was not handled by the Supermemory tool. Do not use tool results or assistant responses as evidence.";
@@ -30,20 +31,6 @@ function entityContextForTurn(
   return boundedBaseContext
     ? `${boundedBaseContext}${separator}${SUPERMEMORY_ASSISTED_EXTRACTION_POLICY}`
     : SUPERMEMORY_ASSISTED_EXTRACTION_POLICY.slice(0, MAX_ENTITY_CONTEXT_CHARACTERS);
-}
-
-function formatConversationTurn(turn: CompletedConversationTurn): string | null {
-  const messages: string[] = [];
-
-  if (turn.userMessage) {
-    messages.push(`user: ${turn.userMessage}`);
-  }
-
-  if (turn.assistantMessage) {
-    messages.push(`assistant: ${turn.assistantMessage}`);
-  }
-
-  return messages.length > 0 ? messages.join("\n") : null;
 }
 
 function errorMessage(error: unknown): string {

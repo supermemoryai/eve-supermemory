@@ -23,8 +23,9 @@
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "prebuild": "npm run clean",
     "build": "tsc -p tsconfig.build.json",
-    "check": "biome ci src",
-    "format": "biome format --write src",
+    "check": "biome ci src evals tests",
+    "format": "biome format --write src evals tests",
+    "test": "node --import ./tests/resolve-ts.mjs --test tests/*.test.ts",
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit"
   },

@@ -22,7 +22,9 @@ npm install @supermemory/eve
 ```
 
 The provider supports Eve 0.47.3 and newer 0.x releases. Set `SUPERMEMORY_API_KEY` from the
-[Supermemory console](https://console.supermemory.ai).
+[Supermemory console](https://console.supermemory.ai). For a self-hosted server, set
+`SUPERMEMORY_BASE_URL` (for example `http://localhost:6767`). Both are read when the client is
+first used. `SUPERMEMORY_LOG` sets the SDK log level.
 
 Create a memory slot in the consuming Eve agent. `supermemory(...)` configures the provider;
 `defineMemory(...)` binds it to an Eve-managed scope.
@@ -153,6 +155,22 @@ export default defineMemory({
 need a different memory policy. The model cannot change caller identity, container routing, or
 capture policy at runtime.
 
+`client` is passed to the Supermemory SDK constructor. Leave a field out and the SDK keeps its
+default, including `SUPERMEMORY_BASE_URL` and `SUPERMEMORY_LOG`. Set `client.baseURL` when the
+URL should come from code instead of the environment.
+
+```ts
+provider: supermemory({
+  client: {
+    baseURL: "http://localhost:6767",
+    timeout: 20_000,
+  },
+}),
+```
+
+`supermemory()` with no options is enough when `SUPERMEMORY_API_KEY` is set in the environment
+that runs the agent.
+
 ## Frequently asked questions
 
 ### How do I add memory to Eve?
@@ -183,8 +201,11 @@ Requires Node.js 24 or newer.
 
 ```bash
 npm install
+npm test
 npm run check
 npm run typecheck
 npm run build
 npm pack --dry-run
 ```
+
+Live agent evals live in `evals/` and run with `eve eval` from a consuming Eve app. See `evals/README.md`.

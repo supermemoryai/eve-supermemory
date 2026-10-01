@@ -1,8 +1,11 @@
+import type { ClientOptions } from "supermemory";
 import { z } from "zod";
 
 const metadataValue = z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]);
 
 export type SupermemoryApiKey = string | (() => string | Promise<string>);
+
+export type SupermemoryClientOptions = Omit<ClientOptions, "apiKey">;
 
 const apiKey = z.union([
   z.string().min(1),
@@ -18,8 +21,14 @@ function isTimeZone(value: string): boolean {
   }
 }
 
+const clientOptions = z.custom<SupermemoryClientOptions>(
+  (value) => value !== null && typeof value === "object" && !Array.isArray(value),
+  "Client options must be an object.",
+);
+
 const optionsSchema = z.object({
-  apiKey,
+  apiKey: apiKey.optional(),
+  client: clientOptions.optional(),
   containerTagPrefix: z
     .string()
     .min(1)
@@ -59,7 +68,8 @@ const optionsSchema = z.object({
 export type SupermemoryMetadataValue = string | number | boolean | readonly string[];
 
 export interface SupermemoryOptions {
-  readonly apiKey: SupermemoryApiKey;
+  readonly apiKey?: SupermemoryApiKey;
+  readonly client?: SupermemoryClientOptions;
   readonly containerTagPrefix?: string;
   readonly autoSearch?: {
     readonly enabled?: boolean;
@@ -77,7 +87,8 @@ export interface SupermemoryOptions {
 }
 
 export interface SupermemoryConfig {
-  readonly apiKey: SupermemoryApiKey;
+  readonly apiKey?: SupermemoryApiKey;
+  readonly client?: SupermemoryClientOptions;
   readonly containerTagPrefix: string;
   readonly autoSearch: {
     readonly enabled: boolean;

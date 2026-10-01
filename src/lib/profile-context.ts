@@ -1,6 +1,8 @@
 import type Supermemory from "supermemory";
 import { z } from "zod";
 
+import { countConversationTurns } from "./conversation-format.js";
+
 const PROFILE_ENTRY_LIMIT = 10;
 const RECENT_CONTEXT_LIMIT = 5;
 const RECENT_CONVERSATION_LIMIT = 10;
@@ -105,11 +107,6 @@ function formattedDate(timestamp: string, timeZone: string): string {
   }).format(new Date(timestamp));
 }
 
-function conversationTurns(content?: string): number {
-  if (!content) return 0;
-  return content.match(/(^|\n)user:/g)?.length ?? 0;
-}
-
 function conversationSize(content?: string): string {
   return `${new Intl.NumberFormat("en-US").format(content?.length ?? 0)} chars`;
 }
@@ -201,7 +198,7 @@ export async function loadProfileContext({
       sessionsStartedYesterday += 1;
     }
 
-    const turns = conversationTurns(document.content);
+    const turns = countConversationTurns(document.content);
     const sessionId = conversationSessionId(document.metadata);
     const sessionCustomId = document.customId?.trim();
     const header = [

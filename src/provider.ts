@@ -24,9 +24,9 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown Supermemory error";
 }
 
-export function supermemory(options: SupermemoryOptions): MemoryProvider {
+export function supermemory(options: SupermemoryOptions = {}): MemoryProvider {
   const config = resolveOptions(options);
-  const getClient = createSupermemoryClientFactory(config.apiKey);
+  const getClient = createSupermemoryClientFactory(config.apiKey, config.client);
   const dependencies = (scopeKey: string): SupermemoryDependencies => ({
     getClient,
     containerTags: resolveContainerTags(scopeKey, config.containerTagPrefix),
