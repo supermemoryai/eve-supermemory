@@ -26,6 +26,24 @@ The provider supports Eve 0.47.3 and newer 0.x releases. Set `SUPERMEMORY_API_KE
 `SUPERMEMORY_BASE_URL` (for example `http://localhost:6767`). Both are read when the client is
 first used. `SUPERMEMORY_LOG` sets the SDK log level.
 
+## Local server
+
+```bash
+npm run supermemory:up
+```
+
+That builds official `supermemory-server` 0.0.8, starts it on `http://127.0.0.1:6767`, and writes
+`SUPERMEMORY_API_KEY` and `SUPERMEMORY_BASE_URL` to gitignored `.env.local`. `npm run supermemory:down`
+stops the container and keeps its data volume.
+
+Put provider settings in `.env` or `.env.local`. A custom `OPENAI_BASE_URL` makes the server
+call `{base}/chat/completions`. For Azure AI Foundry, set that base URL to
+`https://<resource>.services.ai.azure.com/openai/v1` and `OPENAI_MODEL` to the deployment name.
+Foundry chat models reject `max_tokens`, so an Azure base URL also starts a small rewrite proxy.
+A trailing `/responses` on the base URL is removed. Embeddings stay on the local model. For
+Ollama on this machine, set `OPENAI_BASE_URL=http://host.docker.internal:11434/v1` and any
+non-empty `OPENAI_API_KEY`.
+
 Create a memory slot in the consuming Eve agent. `supermemory(...)` configures the provider;
 `defineMemory(...)` binds it to an Eve-managed scope.
 

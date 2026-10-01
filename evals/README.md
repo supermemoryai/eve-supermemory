@@ -31,6 +31,8 @@ SUPERMEMORY_E2E_RUN_ID
 
 `SUPERMEMORY_E2E_SCOPE` defaults to `e2e`. `SUPERMEMORY_BASE_URL` points the helpers at a self-hosted server. Omit it for `https://api.supermemory.ai`.
 
+`npm run supermemory:up` writes `SUPERMEMORY_API_KEY` and `SUPERMEMORY_BASE_URL=http://127.0.0.1:6767` into `.env.local`. The server and the Eve agent each need a model key. One `OPENAI_API_KEY` covers both.
+
 ```bash
 eve eval --max-concurrency 1 --timeout 180000 --verbose
 ```

@@ -26,6 +26,8 @@
     "check": "biome ci src evals tests",
     "format": "biome format --write src evals tests",
     "test": "node --import ./tests/resolve-ts.mjs --test tests/*.test.ts",
+    "supermemory:up": "node scripts/local-supermemory.mjs up",
+    "supermemory:down": "node scripts/local-supermemory.mjs down",
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit"
   },

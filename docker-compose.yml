@@ -1,0 +1,36 @@
+services:
+  # Foundry chat deployments reject max_tokens. This rewrites that field and
+  # forwards to OPENAI_BASE_URL. Started only with the azure compose profile.
+  azure-shim:
+    profiles: ["azure"]
+    image: node:24-bookworm-slim
+    command: ["node", "/shim/azure-chat-shim.mjs"]
+    environment:
+      PORT: "8080"
+      AZURE_UPSTREAM: ${OPENAI_BASE_URL}
+    volumes:
+      - ./scripts/azure-chat-shim.mjs:/shim/azure-chat-shim.mjs:ro
+
+  supermemory:
+    build:
+      context: ./docker
+    image: eve-supermemory-local:0.0.8
+    ports:
+      - "127.0.0.1:6767:6767"
+    environment:
+      PORT: "6767"
+      SUPERMEMORY_DATA_DIR: /data
+      SUPERMEMORY_EMBEDDING_PROVIDER: local
+      SUPERMEMORY_DISABLE_TELEMETRY: "1"
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
+      - path: .env.supermemory
+        required: false
+    volumes:
+      - supermemory-data:/data
+
+volumes:
+  supermemory-data:
