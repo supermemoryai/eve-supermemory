@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: release
@@ -14,14 +15,15 @@ concurrency:
 
 jobs:
   release:
-    runs-on: "peak-ubuntu-24.04-4"
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@11
       - run: npm ci
       - run: npm run check
       - run: npm run typecheck
@@ -57,12 +59,4 @@ jobs:
           EOF
       - name: Publish to npm
         if: steps.publication.outputs.publish == 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "NPM_TOKEN is required to publish" >&2
-            exit 1
-          fi
-
-          npm publish --access public
+        run: npm publish "$RUNNER_TEMP"/supermemory-eve-*.tgz --access public

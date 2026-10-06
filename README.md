@@ -194,4 +194,8 @@ npm pack --dry-run
 Pushes to `main` run the release workflow. After checks and a packaged-import smoke test pass,
 the workflow publishes the version in `package.json` if it is not already on npm. Bump the
 package version and update `package-lock.json` to ship a new release; no Git tag is required.
-Publishing requires the repository's `NPM_TOKEN` Actions secret.
+Publishing uses npm trusted publishing with GitHub Actions OIDC; no `NPM_TOKEN` secret is needed.
+In the npm package's trusted publisher settings, select GitHub Actions, set the organization to
+`supermemoryai`, the repository to `eve-supermemory`, and the workflow filename to `release.yml`.
+Leave the environment name empty and allow direct `npm publish`. The release job uses a
+GitHub-hosted runner because npm trusted publishing does not support self-hosted runners.
