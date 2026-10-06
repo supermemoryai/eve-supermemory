@@ -188,3 +188,10 @@ npm run typecheck
 npm run build
 npm pack --dry-run
 ```
+
+### Publishing
+
+Pushes to `main` run the release workflow. After checks and a packaged-import smoke test pass,
+the workflow publishes the version in `package.json` if it is not already on npm. Bump the
+package version and update `package-lock.json` to ship a new release; no Git tag is required.
+Publishing requires the repository's `NPM_TOKEN` Actions secret.
