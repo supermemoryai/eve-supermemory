@@ -24,6 +24,9 @@ npm install @supermemory/eve
 The provider supports Eve 0.47.3 and newer 0.x releases. Set `SUPERMEMORY_API_KEY` from the
 [Supermemory console](https://console.supermemory.ai).
 
+Use Eve 0.71.3 or newer for development. Eve 0.66.1 has an upstream completed-turn capture
+regression; Eve restored automatic capture in 0.69.0.
+
 Create a memory slot in the consuming Eve agent. `supermemory(...)` configures the provider;
 `defineMemory(...)` binds it to an Eve-managed scope.
 
@@ -176,6 +179,10 @@ extracted from them. Failed and cancelled turns are ignored.
 Install the same provider. SuperRAG handles PDFs, URLs, images, audio, video, and text, so the agent
 can index a source, search it later, and return to the original document when it needs more detail.
 There is no separate RAG setup.
+
+Eve 0.71.3 has an upstream serialization issue that prevents memory-provider tools from loading
+on attached-file turns. Until Eve fixes it, use `extract` with text or URL sources. File extraction
+accepts only Eve-staged paths under `/workspace/.eve/attachments/`.
 
 ## Development
 

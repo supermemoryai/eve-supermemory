@@ -24,12 +24,12 @@ function extractionMetadata(input: ExtractionInput, ctx: ToolContext) {
 
 async function sandboxAttachment(inputPath: string, ctx: ToolContext) {
   const sandbox = await ctx.getSandbox();
-  const attachmentsRoot = resolve(sandbox.resolvePath("/workspace/attachments"));
+  const attachmentsRoot = resolve(sandbox.resolvePath("/workspace/.eve/attachments"));
   const resolvedPath = resolve(sandbox.resolvePath(inputPath));
   const relativePath = relative(attachmentsRoot, resolvedPath);
 
   if (!relativePath || relativePath.startsWith("..") || isAbsolute(relativePath)) {
-    throw new Error("Files must come from Eve's /workspace/attachments directory.");
+    throw new Error("Files must come from Eve's /workspace/.eve/attachments directory.");
   }
 
   const bytes = await sandbox.readBinaryFile({
