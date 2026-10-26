@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "supermemory": "^4.25.4",
-    "zod": "4.4.3"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
