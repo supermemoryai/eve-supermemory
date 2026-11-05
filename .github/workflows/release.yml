@@ -24,6 +24,23 @@ jobs:
           node-version: 24
           package-manager-cache: false
       - run: npm install --global npm@11
+      - name: Validate release channel
+        id: release-channel
+        run: |
+          node --input-type=module <<'EOF'
+          import { appendFileSync, readFileSync } from "node:fs";
+
+          const { version, publishConfig } = JSON.parse(readFileSync("package.json", "utf8"));
+          const tag = publishConfig?.tag ?? "latest";
+          if (tag !== "next" && tag !== "latest") {
+            throw new Error(`Unsupported release tag: ${tag}`);
+          }
+          if (version.includes("-") && tag === "latest") {
+            throw new Error("Prerelease versions must not replace npm latest.");
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `tag=${tag}\n`);
+          console.log(`Release channel: ${tag}`);
+          EOF
       - run: npm ci
       - run: npm run check
       - run: npm run typecheck
@@ -59,4 +76,4 @@ jobs:
           EOF
       - name: Publish to npm
         if: steps.publication.outputs.publish == 'true'
-        run: npm publish "$RUNNER_TEMP"/supermemory-eve-*.tgz --access public
+        run: npm publish "$RUNNER_TEMP"/supermemory-eve-*.tgz --access public --tag "${{ steps.release-channel.outputs.tag }}"

@@ -9,17 +9,25 @@ gives Eve tools to search, remember, extract, and forget.
 
 ## Add memory to Eve
 
-From an Eve project, add the provider from Eve's integration registry:
+For Eve 1.0 RC5, install the matching provider candidate once it is published:
 
 ```bash
-eve add memory/supermemory
+npm install @supermemory/eve@next eve@1.0.0-rc.5
 ```
 
-Or install it yourself:
+The candidate `@supermemory/eve@0.2.0-rc.1` targets only the `next` tag. Until that
+release is approved and published, use a local build of this branch; `next` is not
+available yet. The default npm `latest` remains `0.1.3` for Eve 0.x consumers.
+
+For an existing Eve 0.x application, keep the current provider:
 
 ```bash
-npm install @supermemory/eve
+npm install @supermemory/eve@0.1.3
 ```
+
+`eve add memory/supermemory` installs from Eve's integration registry. For the 1.0
+candidate, use the explicit `@next` installation above until the registry selects a
+compatible release; don't assume the registry command upgrades the provider channel.
 
 This source targets Eve 1.0, starting with `eve@1.0.0-rc.5`. Development pins that release
 exactly. Set `SUPERMEMORY_API_KEY` from the
@@ -210,9 +218,11 @@ It needs no v26-to-v27 event conversion. Applications that archive Eve events th
 follow Eve's saved-history migration separately, retain their originals, and keep old deployments
 running for existing sessions as the upgrade guide requires.
 
-This PR does not publish a new package version. Until a compatible release is published, the
-npm `0.1.3` release remains the Eve 0.x provider. Upgrading the agent to Eve 1.0 before installing
-the matching provider release is unsupported.
+The release candidate is `0.2.0-rc.1`; merging this branch runs the existing release workflow
+and publishes it to `next`, not `latest`. Eve 0.x consumers stay on `0.1.3`. The `0.2.0-rc.1`
+prerelease is outside existing `^0.1.3` and `~0.1.3` ranges. Upgrading an agent to Eve 1.0 before
+installing the matching provider is unsupported. This separates the breaking runtime upgrade
+without changing stored memory or the existing stable release.
 
 ## Development
 
@@ -228,9 +238,15 @@ npm pack --dry-run
 
 ### Publishing
 
-Pushes to `main` run the release workflow. After checks and a packaged-import smoke test pass,
+Pushes to `main` run the release workflow. **Merging a version bump can publish automatically.**
+After checks and a packaged-import smoke test pass,
 the workflow publishes the version in `package.json` if it is not already on npm. Bump the
 package version and update `package-lock.json` to ship a new release; no Git tag is required.
+The workflow reads the npm tag from `publishConfig.tag`, permits only `next` and `latest`,
+and refuses to publish a prerelease to `latest`. The candidate sets `tag: "next"`. Keep that
+tag through RC validation; GA promotion and changing `latest` require a separate release decision.
+A local `npm publish --dry-run --tag next` checks the candidate without publishing it.
+
 Publishing uses npm trusted publishing with GitHub Actions OIDC; no `NPM_TOKEN` secret is needed.
 In the npm package's trusted publisher settings, select GitHub Actions, set the organization to
 `supermemoryai`, the repository to `eve-supermemory`, and the workflow filename to `release.yml`.

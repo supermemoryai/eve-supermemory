@@ -1,6 +1,6 @@
 {
   "name": "@supermemory/eve",
-  "version": "0.1.3",
+  "version": "0.2.0-rc.1",
   "description": "Durable user context, retrieval, extraction, remembering, and forgetting for Eve agents.",
   "repository": {
     "type": "git",
@@ -46,7 +46,8 @@
     "eve": "^1.0.0-rc.5"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "next"
   },
   "engines": {
     "node": ">=24"
