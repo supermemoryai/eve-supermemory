@@ -39,11 +39,11 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
     "@types/node": "24.x",
-    "eve": "0.71.3",
+    "eve": "1.0.0-rc.5",
     "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "eve": ">=0.47.3 <1"
+    "eve": "^1.0.0-rc.5"
   },
   "publishConfig": {
     "access": "public"

@@ -1,6 +1,5 @@
 import {
   defineMemoryProvider,
-  type MemoryCompactionCompletedContext,
   type MemoryProvider,
   type MemoryRecallMessage,
   type MemoryTurnStartedContext,
@@ -18,8 +17,6 @@ import { createSupermemoryTools } from "./tools/index.js";
 const PROFILE_CONTEXT_ID = "supermemory-profile-context";
 const AUTO_SEARCH_CONTEXT_ID = "supermemory-auto-search";
 
-type RecallContext = MemoryTurnStartedContext | MemoryCompactionCompletedContext;
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown Supermemory error";
 }
@@ -31,7 +28,7 @@ export function supermemory(options: SupermemoryOptions): MemoryProvider {
     getClient,
     containerTags: resolveContainerTags(scopeKey, config.containerTagPrefix),
   });
-  const recall = async (context: RecallContext) => {
+  const recall = async (context: MemoryTurnStartedContext) => {
     const messages: MemoryRecallMessage[] = [];
 
     try {
@@ -75,7 +72,6 @@ export function supermemory(options: SupermemoryOptions): MemoryProvider {
   return defineMemoryProvider({
     recall: {
       "turn.started": recall,
-      "compaction.completed": recall,
     },
     ...(config.capture.enabled
       ? {

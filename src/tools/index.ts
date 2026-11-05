@@ -1,3 +1,5 @@
+import type { MemoryToolSet } from "eve/memory";
+
 import type { SupermemoryDependencies } from "../lib/dependencies.js";
 import { createExtractTool } from "./extract.js";
 import { createForgetTool } from "./forget.js";
@@ -7,7 +9,7 @@ import { createReadSessionTool } from "./read-session.js";
 import { createRememberTool } from "./remember.js";
 import { createSearchTool } from "./search.js";
 
-export function createSupermemoryTools(dependencies: SupermemoryDependencies) {
+export function createSupermemoryTools(dependencies: SupermemoryDependencies): MemoryToolSet {
   return {
     search: createSearchTool(dependencies),
     read_session: createReadSessionTool(dependencies),

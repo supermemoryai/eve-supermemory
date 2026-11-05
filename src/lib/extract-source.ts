@@ -34,7 +34,7 @@ async function sandboxAttachment(inputPath: string, ctx: ToolContext) {
 
   const bytes = await sandbox.readBinaryFile({
     path: resolvedPath,
-    abortSignal: ctx.abortSignal,
+    signal: ctx.abortSignal,
   });
   if (!bytes) {
     throw new Error(`Attachment not found: ${inputPath}`);
