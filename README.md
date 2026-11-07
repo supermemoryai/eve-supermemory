@@ -171,8 +171,8 @@ Automatic recall and capture skip two kinds of session by default, so they make 
 calls:
 
 - Child sessions, which Eve marks with `session.parent`: declared subagents, copies started by the
-  built-in `agent` tool, `ctx.agent(...)` workflow calls, and remote or workspace agents called as
-  subagents.
+  built-in `agent` tool, and `ctx.agent(...)` workflow calls. A remote agent's session carries the
+  parent link only when its `eveChannel({ trustedForwarders })` accepts the calling deployment.
 - Scheduled runs, which Eve marks with `session.schedule`. A later message from a person in the
   same session clears that mark, so those turns are recalled and captured as usual.
 
