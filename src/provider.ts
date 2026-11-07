@@ -1,5 +1,6 @@
 import {
   defineMemoryProvider,
+  type MemoryOperationContext,
   type MemoryProvider,
   type MemoryRecallMessage,
   type MemoryTurnStartedContext,
@@ -11,7 +12,7 @@ import { createSupermemoryClientFactory } from "./lib/client.js";
 import { resolveContainerTags } from "./lib/container-tags.js";
 import type { SupermemoryDependencies } from "./lib/dependencies.js";
 import { loadProfileContext } from "./lib/profile-context.js";
-import { resolveOptions, type SupermemoryOptions } from "./options.js";
+import { resolveOptions, type SupermemoryConfig, type SupermemoryOptions } from "./options.js";
 import { createSupermemoryTools } from "./tools/index.js";
 
 const PROFILE_CONTEXT_ID = "supermemory-profile-context";
@@ -19,6 +20,24 @@ const AUTO_SEARCH_CONTEXT_ID = "supermemory-auto-search";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown Supermemory error";
+}
+
+function envFlag(name: string): boolean | undefined {
+  const value = process.env[name]?.trim().toLowerCase();
+  return value === "true" ? true : value === "false" ? false : undefined;
+}
+
+// Eve sets session.parent on child sessions (subagents, the agent tool) and session.schedule on scheduled runs.
+function skipsAutomaticMemory(
+  session: MemoryOperationContext["session"],
+  config: SupermemoryConfig,
+): boolean {
+  if (session.parent && !(envFlag("SUPERMEMORY_CAPTURE_SUBAGENTS") ?? config.captureSubagents)) {
+    return true;
+  }
+  return Boolean(
+    session.schedule && !(envFlag("SUPERMEMORY_CAPTURE_HEADLESS") ?? config.captureHeadless),
+  );
 }
 
 export function supermemory(options: SupermemoryOptions): MemoryProvider {
@@ -29,6 +48,7 @@ export function supermemory(options: SupermemoryOptions): MemoryProvider {
     containerTags: resolveContainerTags(scopeKey, config.containerTagPrefix),
   });
   const recall = async (context: MemoryTurnStartedContext) => {
+    if (skipsAutomaticMemory(context.session, config)) return null;
     const messages: MemoryRecallMessage[] = [];
 
     try {
@@ -76,8 +96,14 @@ export function supermemory(options: SupermemoryOptions): MemoryProvider {
     ...(config.capture.enabled
       ? {
           capture: {
-            "turn.completed": (context) =>
-              captureCompletedTurn(context, dependencies(context.memory.scope.key), config.capture),
+            "turn.completed": async (context) => {
+              if (skipsAutomaticMemory(context.session, config)) return;
+              await captureCompletedTurn(
+                context,
+                dependencies(context.memory.scope.key),
+                config.capture,
+              );
+            },
           },
         }
       : {}),

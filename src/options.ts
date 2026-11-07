@@ -20,6 +20,8 @@ function isTimeZone(value: string): boolean {
 
 const optionsSchema = z.object({
   apiKey,
+  captureSubagents: z.boolean().default(false),
+  captureHeadless: z.boolean().default(false),
   containerTagPrefix: z
     .string()
     .min(1)
@@ -60,6 +62,8 @@ export type SupermemoryMetadataValue = string | number | boolean | readonly stri
 
 export interface SupermemoryOptions {
   readonly apiKey: SupermemoryApiKey;
+  readonly captureSubagents?: boolean;
+  readonly captureHeadless?: boolean;
   readonly containerTagPrefix?: string;
   readonly autoSearch?: {
     readonly enabled?: boolean;
@@ -78,6 +82,8 @@ export interface SupermemoryOptions {
 
 export interface SupermemoryConfig {
   readonly apiKey: SupermemoryApiKey;
+  readonly captureSubagents: boolean;
+  readonly captureHeadless: boolean;
   readonly containerTagPrefix: string;
   readonly autoSearch: {
     readonly enabled: boolean;
