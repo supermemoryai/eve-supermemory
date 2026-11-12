@@ -173,12 +173,15 @@ calls:
 - Child sessions, which Eve marks with `session.parent`: declared subagents, copies started by the
   built-in `agent` tool, and `ctx.agent(...)` workflow calls. A remote agent's session carries the
   parent link only when its `eveChannel({ trustedForwarders })` accepts the calling deployment.
+  A child keeps `session.parent` for its whole life, so turns a person sends to it by continuing
+  it with its `taskId` are skipped too unless `captureSubagents` is on.
 - Scheduled runs, which Eve marks with `session.schedule`. A later message from a person in the
-  same session clears that mark, so those turns are recalled and captured as usual.
+  same session clears that mark, so those turns are recalled and captured as usual. Approval and
+  input responses keep the mark. `captureHeadless` covers only these scheduled runs.
 
 To recall and capture them as before, set the matching option or environment variable. Each one
-turns on both recall and capture for its kind of session. The environment variable wins when it is
-set to `true` or `false`.
+turns on both recall and capture for its kind of session. The environment variable wins over the
+option in both directions when it is set to `true`, `1`, `yes`, `on` or `false`, `0`, `no`, `off`.
 
 ```ts
 supermemory({

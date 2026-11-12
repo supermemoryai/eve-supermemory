@@ -62,7 +62,9 @@ export type SupermemoryMetadataValue = string | number | boolean | readonly stri
 
 export interface SupermemoryOptions {
   readonly apiKey: SupermemoryApiKey;
+  /** Recall and capture in child sessions (`session.parent`), including a child a person continues with its `taskId`. */
   readonly captureSubagents?: boolean;
+  /** Recall and capture in scheduled runs (`session.schedule`); Eve has no other headless session kind. */
   readonly captureHeadless?: boolean;
   readonly containerTagPrefix?: string;
   readonly autoSearch?: {
