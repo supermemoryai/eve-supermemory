@@ -20,6 +20,8 @@ function isTimeZone(value: string): boolean {
 
 const optionsSchema = z.object({
   apiKey,
+  captureSubagents: z.boolean().default(false),
+  captureHeadless: z.boolean().default(false),
   containerTagPrefix: z
     .string()
     .min(1)
@@ -60,6 +62,10 @@ export type SupermemoryMetadataValue = string | number | boolean | readonly stri
 
 export interface SupermemoryOptions {
   readonly apiKey: SupermemoryApiKey;
+  /** Recall and capture in child sessions (`session.parent`), including a child a person continues with its `taskId`. */
+  readonly captureSubagents?: boolean;
+  /** Recall and capture in scheduled runs (`session.schedule`); Eve has no other headless session kind. */
+  readonly captureHeadless?: boolean;
   readonly containerTagPrefix?: string;
   readonly autoSearch?: {
     readonly enabled?: boolean;
@@ -78,6 +84,8 @@ export interface SupermemoryOptions {
 
 export interface SupermemoryConfig {
   readonly apiKey: SupermemoryApiKey;
+  readonly captureSubagents: boolean;
+  readonly captureHeadless: boolean;
   readonly containerTagPrefix: string;
   readonly autoSearch: {
     readonly enabled: boolean;

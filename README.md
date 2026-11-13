@@ -163,7 +163,35 @@ export default defineMemory({
 ```
 
 `capture.entityContext` can replace the default definition of durable context for products that
-need a different memory policy. The model cannot change caller identity, container routing, or
+need a different memory policy.
+
+### Subagents and scheduled runs
+
+Automatic recall and capture skip two kinds of session by default, so they make no Supermemory
+calls:
+
+- Child sessions, which Eve marks with `session.parent`: declared subagents, copies started by the
+  built-in `agent` tool, and `ctx.agent(...)` workflow calls. A remote agent's session carries the
+  parent link only when its `eveChannel({ trustedForwarders })` accepts the calling deployment.
+  A child keeps `session.parent` for its whole life, so turns a person sends to it by continuing
+  it with its `taskId` are skipped too unless `captureSubagents` is on.
+- Scheduled runs, which Eve marks with `session.schedule`. A later message from a person in the
+  same session clears that mark, so those turns are recalled and captured as usual. Approval and
+  input responses keep the mark. `captureHeadless` covers only these scheduled runs.
+
+To recall and capture them as before, set the matching option or environment variable. Each one
+turns on both recall and capture for its kind of session. The environment variable wins over the
+option in both directions when it is set to `true`, `1`, `yes`, `on` or `false`, `0`, `no`, `off`.
+
+```ts
+supermemory({
+  apiKey: () => process.env.SUPERMEMORY_API_KEY!,
+  captureSubagents: true, // or SUPERMEMORY_CAPTURE_SUBAGENTS=true
+  captureHeadless: true, // or SUPERMEMORY_CAPTURE_HEADLESS=true
+});
+```
+
+The provider tools stay available in every session, because the model calls them on purpose. The model cannot change caller identity, container routing, or
 capture policy at runtime.
 
 ## Frequently asked questions
