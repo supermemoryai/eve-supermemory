@@ -23,8 +23,10 @@ function errorMessage(error: unknown): string {
 }
 
 function envFlag(name: string): boolean | undefined {
-  const value = process.env[name]?.trim().toLowerCase();
-  return value === "true" ? true : value === "false" ? false : undefined;
+  const value = process.env[name]?.trim().toLowerCase() ?? "";
+  if (["true", "1", "yes", "on"].includes(value)) return true;
+  if (["false", "0", "no", "off"].includes(value)) return false;
+  return undefined;
 }
 
 // Eve sets session.parent on child sessions (subagents, the agent tool) and session.schedule on scheduled runs.
