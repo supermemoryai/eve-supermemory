@@ -23,10 +23,10 @@ export async function rememberContext(
     const source = await accessibleDocument(
       client,
       requestedSourceDocumentId,
-      dependencies.containerTags.extraction,
+      dependencies.namespaces.extraction,
       ctx.abortSignal,
     );
-    if (source.status !== "done") {
+    if (source.system.status !== "done") {
       throw new Error(
         "The source document is still processing. Read it again before remembering its contents.",
       );
@@ -38,9 +38,9 @@ export async function rememberContext(
   const result = await addDocument(
     client,
     {
-      containerTag: dependencies.containerTags.context,
+      namespace: dependencies.namespaces.context,
       content: input.memory,
-      customId: sourceId,
+      id: sourceId,
       dreaming: "instant",
       metadata: {
         source_id: sourceId,

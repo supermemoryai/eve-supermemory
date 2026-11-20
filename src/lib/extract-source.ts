@@ -1,7 +1,6 @@
 import { basename, isAbsolute, relative, resolve } from "node:path";
 
 import type { ToolContext } from "eve/tools";
-import { toFile } from "supermemory";
 
 import type { SupermemoryDependencies } from "./dependencies.js";
 
@@ -41,8 +40,7 @@ async function sandboxAttachment(inputPath: string, ctx: ToolContext) {
   }
 
   return {
-    file: await toFile(bytes, basename(resolvedPath)),
-    filepath: resolvedPath,
+    file: new File([Uint8Array.from(bytes)], basename(resolvedPath)),
   };
 }
 
@@ -52,20 +50,19 @@ export async function extractSource(
   dependencies: SupermemoryDependencies,
 ) {
   const client = await dependencies.getClient();
-  const { containerTags } = dependencies;
+  const { namespaces } = dependencies;
   const metadata = extractionMetadata(input, ctx);
 
   if (input.kind === "file") {
-    const { file, filepath } = await sandboxAttachment(input.value, ctx);
+    const { file } = await sandboxAttachment(input.value, ctx);
     const result = await client.documents.uploadFile(
+      namespaces.extraction,
       {
         file,
-        containerTag: containerTags.extraction,
-        filepath,
         metadata: JSON.stringify(metadata),
         taskType: "superrag",
       },
-      { signal: ctx.abortSignal },
+      { abortSignal: ctx.abortSignal },
     );
 
     return {
@@ -75,18 +72,18 @@ export async function extractSource(
   }
 
   const sourceId = `extraction_${ctx.callId}`;
-  const result = await client.documents.add(
+  const result = await client.add(
+    namespaces.extraction,
     {
       content: input.value,
-      containerTag: containerTags.extraction,
-      customId: sourceId,
+      id: sourceId,
       metadata: {
         ...metadata,
         source_id: sourceId,
       },
       taskType: "superrag",
     },
-    { signal: ctx.abortSignal },
+    { abortSignal: ctx.abortSignal },
   );
 
   return {

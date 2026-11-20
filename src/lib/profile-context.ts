@@ -9,21 +9,8 @@ const MEMORIES_PER_CONVERSATION_LIMIT = 3;
 const PROFILE_ENTRY_CHARACTERS = 240;
 const MEMORY_ENTRY_CHARACTERS = 200;
 const CONVERSATION_SUMMARY_CHARACTERS = 200;
-const REQUEST_TIMEOUT_MILLISECONDS = 30_000;
+const REQUEST_TIMEOUT_SECONDS = 30;
 const DAY_MILLISECONDS = 24 * 60 * 60 * 1_000;
-
-const memoryEntrySchema = z.looseObject({
-  memory: z.string(),
-  isLatest: z.boolean(),
-  isForgotten: z.boolean(),
-  isStatic: z.boolean().optional(),
-  createdAt: z.string(),
-  documentIds: z.array(z.string()).optional(),
-});
-
-const memoryEntriesResponseSchema = z.object({
-  memoryEntries: z.array(memoryEntrySchema),
-});
 
 const conversationMetadataSchema = z.looseObject({
   session_id: z.string().trim().min(1),
@@ -32,7 +19,7 @@ const conversationMetadataSchema = z.looseObject({
 export interface ProfileContextInput {
   readonly abortSignal: AbortSignal;
   readonly client: Supermemory;
-  readonly containerTag: string;
+  readonly namespace: string;
   readonly now?: Date;
   readonly timeZone: string;
 }
@@ -105,12 +92,12 @@ function formattedDate(timestamp: string, timeZone: string): string {
   }).format(new Date(timestamp));
 }
 
-function conversationTurns(content?: string): number {
+function conversationTurns(content?: string | null): number {
   if (!content) return 0;
   return content.match(/(^|\n)user:/g)?.length ?? 0;
 }
 
-function conversationSize(content?: string): string {
+function conversationSize(content?: string | null): string {
   return `${new Intl.NumberFormat("en-US").format(content?.length ?? 0)} chars`;
 }
 
@@ -119,69 +106,69 @@ function conversationSessionId(metadata: unknown): string | undefined {
   return result.success ? result.data.session_id : undefined;
 }
 
-async function listMemoryEntries(
-  client: Supermemory,
-  containerTag: string,
-  abortSignal: AbortSignal,
-) {
-  return memoryEntriesResponseSchema.parse(
-    await client.post<unknown>("/v4/memories/list", {
-      body: {
-        containerTags: [containerTag],
-        page: 1,
-        limit: RECENT_MEMORY_LIMIT,
-        sort: "createdAt",
-        order: "desc",
-      },
-      signal: abortSignal,
-      timeout: REQUEST_TIMEOUT_MILLISECONDS,
-    }),
-  );
-}
-
 export async function loadProfileContext({
   abortSignal,
   client,
-  containerTag,
+  namespace,
   now = new Date(),
   timeZone,
 }: ProfileContextInput): Promise<string> {
   const yesterday = previousCalendarDate(calendarDateInTimeZone(now, timeZone));
 
   const [profileResponse, recentResponse, memoryResponse] = await Promise.all([
-    client.profile({ containerTag }, { signal: abortSignal }),
-    client.documents.list(
+    client.profile(namespace, {}, { abortSignal }),
+    client.list(
+      namespace,
+      "documents",
       {
-        containerTags: [containerTag],
-        filters: {
-          AND: [{ key: "source_type", value: "conversation" }],
-        },
-        includeContent: true,
+        filter: { field: "source_type", operator: "eq", value: "conversation" },
+        include: { content: true },
         limit: RECENT_CONVERSATION_LIMIT,
         order: "desc",
         page: 1,
         sort: "updatedAt",
       },
-      { signal: abortSignal },
+      { abortSignal },
     ),
-    listMemoryEntries(client, containerTag, abortSignal),
+    client.list(
+      namespace,
+      "memories",
+      {
+        page: 1,
+        limit: RECENT_MEMORY_LIMIT,
+        sort: "createdAt",
+        order: "desc",
+      },
+      { abortSignal, timeoutInSeconds: REQUEST_TIMEOUT_SECONDS },
+    ),
   ]);
 
-  const profile = uniqueEntries(profileResponse.profile.static, PROFILE_ENTRY_LIMIT);
-  const recentDocumentIds = new Set(recentResponse.memories.map((document) => document.id));
+  const profile = uniqueEntries(
+    profileResponse.profile.static.map((entry) => entry.memory),
+    PROFILE_ENTRY_LIMIT,
+  );
+  const recentDocumentIds = new Map<string, string>(
+    recentResponse.documents.map((document) => [
+      typeof document.metadata.source_id === "string" ? document.metadata.source_id : document.id,
+      document.id,
+    ]),
+  );
   const memoriesByDocument = new Map<string, string[]>();
   const ungroupedMemories: Array<{ createdAt: string; memory: string }> = [];
 
-  for (const entry of memoryResponse.memoryEntries) {
+  for (const entry of memoryResponse.memories) {
     if (entry.isForgotten || !entry.isLatest || entry.isStatic) continue;
 
     const memory = compactText(entry.memory, MEMORY_ENTRY_CHARACTERS);
-    const matchingDocumentIds =
-      entry.documentIds?.filter((documentId) => recentDocumentIds.has(documentId)) ?? [];
+    const sourceDocumentId =
+      typeof entry.metadata.source_id === "string"
+        ? recentDocumentIds.get(entry.metadata.source_id)
+        : undefined;
+    const matchingDocumentIds = sourceDocumentId ? [sourceDocumentId] : [];
 
     if (matchingDocumentIds.length === 0) {
       if (ungroupedMemories.length < RECENT_CONTEXT_LIMIT) {
-        ungroupedMemories.push({ createdAt: entry.createdAt, memory });
+        ungroupedMemories.push({ createdAt: entry.system.createdAt, memory });
       }
       continue;
     }
@@ -196,16 +183,17 @@ export async function loadProfileContext({
   const recentConversations: string[] = [];
   let sessionsStartedYesterday = 0;
 
-  for (const document of recentResponse.memories) {
-    if (calendarDateInTimeZone(new Date(document.createdAt), timeZone) === yesterday) {
+  for (const document of recentResponse.documents) {
+    if (calendarDateInTimeZone(new Date(document.system.createdAt), timeZone) === yesterday) {
       sessionsStartedYesterday += 1;
     }
 
     const turns = conversationTurns(document.content);
     const sessionId = conversationSessionId(document.metadata);
-    const sessionCustomId = document.customId?.trim();
+    const sessionCustomId =
+      typeof document.metadata.source_id === "string" ? document.metadata.source_id : document.id;
     const header = [
-      formattedDate(document.createdAt, timeZone),
+      formattedDate(document.system.createdAt, timeZone),
       ...(sessionId ? [`Session: \`${sessionId}\``] : []),
       ...(sessionCustomId ? [`Custom ID: \`${sessionCustomId}\``] : []),
       countLabel(turns, "turn"),
@@ -245,7 +233,7 @@ export async function loadProfileContext({
   }
 
   const totalConversations = recentResponse.pagination.totalItems;
-  const shownConversations = recentResponse.memories.length;
+  const shownConversations = recentResponse.documents.length;
   const conversationLines = [
     `${countLabel(totalConversations, "conversation")} total · ${sessionsStartedYesterday} of ${shownConversations} recent sessions started yesterday`,
     ...recentConversations,

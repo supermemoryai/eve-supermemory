@@ -43,6 +43,7 @@ const optionsSchema = z.object({
   capture: z
     .object({
       enabled: z.boolean().default(true),
+      supportingContext: z.string().max(1_500).optional(),
       entityContext: z.string().max(1_500).optional(),
       taskType: z.enum(["memory", "superrag"]).default("memory"),
       dreaming: z.enum(["instant", "dynamic"]).default("dynamic"),
@@ -69,6 +70,7 @@ export interface SupermemoryOptions {
   };
   readonly capture?: {
     readonly enabled?: boolean;
+    readonly supportingContext?: string;
     readonly entityContext?: string;
     readonly taskType?: "memory" | "superrag";
     readonly dreaming?: "instant" | "dynamic";
@@ -87,6 +89,7 @@ export interface SupermemoryConfig {
   };
   readonly capture: {
     readonly enabled: boolean;
+    readonly supportingContext?: string;
     readonly entityContext?: string;
     readonly taskType: "memory" | "superrag";
     readonly dreaming: "instant" | "dynamic";

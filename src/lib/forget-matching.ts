@@ -1,5 +1,4 @@
 import type { ToolContext } from "eve/tools";
-import { z } from "zod";
 
 import type { SupermemoryDependencies } from "./dependencies.js";
 
@@ -11,29 +10,6 @@ export type ForgetMatchingInput = {
   maxForget?: number;
   reason?: string;
 };
-
-const forgetCandidateSchema = z.object({
-  id: z.string(),
-  memory: z.string(),
-  score: z.number(),
-});
-
-const forgetMatchingResponseSchema = z.discriminatedUnion("dryRun", [
-  z.object({
-    dryRun: z.literal(true),
-    count: z.number().int().nonnegative(),
-    forgetBatchId: z.null(),
-    summary: z.string(),
-    candidates: z.array(forgetCandidateSchema),
-  }),
-  z.object({
-    dryRun: z.literal(false),
-    count: z.number().int().nonnegative(),
-    forgetBatchId: z.string().nullable(),
-    summary: z.string(),
-    forgotten: z.array(forgetCandidateSchema),
-  }),
-]);
 
 export async function forgetMatchingMemories(
   input: ForgetMatchingInput,
@@ -50,18 +26,48 @@ export async function forgetMatchingMemories(
   }
 
   const client = await dependencies.getClient();
-  return forgetMatchingResponseSchema.parse(
-    await client.post<unknown>("/v4/memories/forget-matching", {
-      body: {
-        ...(query ? { query } : {}),
-        containerTag: dependencies.containerTags.context,
-        dryRun: input.dryRun,
-        ...(!input.dryRun ? { ids: input.ids } : {}),
-        ...(input.dryRun && input.threshold !== undefined ? { threshold: input.threshold } : {}),
-        ...(input.dryRun && input.maxForget !== undefined ? { maxForget: input.maxForget } : {}),
-        ...(input.reason ? { reason: input.reason } : {}),
+  const response = input.dryRun
+    ? await client.memories.forgetMatching(
+        dependencies.namespaces.context,
+        { query: query ?? "", dryRun: true },
+        { abortSignal: ctx.abortSignal },
+      )
+    : await client.memories.forget(
+        dependencies.namespaces.context,
+        { ids: input.ids ?? [] },
+        { abortSignal: ctx.abortSignal },
+      );
+  let candidates = response.matches;
+  if (input.dryRun && input.threshold !== undefined) {
+    const scored = await client.search(
+      dependencies.namespaces.context,
+      {
+        query: query ?? "",
+        searchMode: "memories",
+        threshold: input.threshold,
+        limit: 100,
       },
-      signal: ctx.abortSignal,
-    }),
-  );
+      { abortSignal: ctx.abortSignal },
+    );
+    const scoredIds = new Set(scored.results.map((result) => result.id));
+    candidates = candidates.filter((candidate) => scoredIds.has(candidate.id));
+  }
+  const matches =
+    input.dryRun && input.maxForget !== undefined
+      ? candidates.slice(0, input.maxForget)
+      : candidates;
+
+  return {
+    ...response,
+    matches,
+    ...(input.reason ? { reason: input.reason } : {}),
+    dryRun: input.dryRun,
+    count: input.dryRun ? matches.length : response.count,
+    forgetBatchId: null,
+    summary:
+      response.errors.length > 0
+        ? `Processed ${response.count} memories with ${response.errors.length} failures.`
+        : `${input.dryRun ? "Matched" : "Forgot"} ${input.dryRun ? matches.length : response.count} memories.`,
+    ...(input.dryRun ? { candidates: matches } : { forgotten: matches }),
+  };
 }

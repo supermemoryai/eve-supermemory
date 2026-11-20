@@ -1,8 +1,8 @@
 import type Supermemory from "supermemory";
 
-import type { ContainerTags } from "./container-tags.js";
+import type { Namespaces } from "./namespaces.js";
 
 export interface SupermemoryDependencies {
   readonly getClient: () => Promise<Supermemory>;
-  readonly containerTags: ContainerTags;
+  readonly namespaces: Namespaces;
 }

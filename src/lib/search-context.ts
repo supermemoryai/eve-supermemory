@@ -3,12 +3,12 @@ import type { SupermemoryDependencies } from "./dependencies.js";
 export const SEARCH_SCOPES = ["all", "memories", "documents", "conversations"] as const;
 
 export type SearchScope = (typeof SEARCH_SCOPES)[number];
-type SearchMode = "memories" | "documents" | "hybrid";
+type SearchMode = "memories" | "chunks" | "hybrid";
 
 const SEARCH_MODE_BY_SCOPE = {
   all: "hybrid",
   memories: "memories",
-  documents: "documents",
+  documents: "chunks",
   conversations: "hybrid",
 } satisfies Record<SearchScope, SearchMode>;
 
@@ -24,26 +24,34 @@ export async function searchStoredContext(
   },
   dependencies: SupermemoryDependencies,
 ) {
-  const filters: Array<{ key: string; value: string }> = [];
+  const filters: Array<{ field: string; operator: "eq"; value: string }> = [];
 
   if (input.scope === "conversations") {
-    filters.push({ key: "source_type", value: "conversation" });
+    filters.push({ field: "source_type", operator: "eq", value: "conversation" });
   }
 
   if (input.customId) {
-    filters.push({ key: "source_id", value: input.customId });
+    filters.push({ field: "source_id", operator: "eq", value: input.customId });
   }
 
   const client = await dependencies.getClient();
-  return client.search(
+  const response = await client.search(
+    dependencies.namespaces.context,
     {
-      q: input.query,
-      containerTag: dependencies.containerTags.context,
+      query: input.query,
       searchMode: SEARCH_MODE_BY_SCOPE[input.scope],
       limit: options.limit ?? 10,
       include: { documents: true },
-      ...(filters.length > 0 ? { filters: { AND: filters } } : {}),
+      ...(filters.length > 0 ? { filter: { operator: "and", operands: filters } } : {}),
     },
-    { signal: options.signal },
+    { abortSignal: options.signal },
   );
+
+  return {
+    ...response,
+    results: response.results.map((result) => ({
+      ...result,
+      documents: result.included?.document ? [result.included.document] : [],
+    })),
+  };
 }
