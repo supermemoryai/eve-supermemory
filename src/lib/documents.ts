@@ -58,7 +58,8 @@ export async function readStoredDocument(
   const document = await accessibleDocument(client, documentId, namespace, ctx.abortSignal);
   const details = {
     id: document.id,
-    customId: document.metadata.source_id ?? document.id,
+    customId:
+      typeof document.metadata.source_id === "string" ? document.metadata.source_id : document.id,
     title: document.title,
     type: document.type,
     status: document.system.status,

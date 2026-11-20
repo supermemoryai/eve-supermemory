@@ -49,8 +49,8 @@ export async function forgetMatchingMemories(
       },
       { abortSignal: ctx.abortSignal },
     );
-    const scores = new Map(scored.results.map((result) => [result.id, result.similarity]));
-    candidates = candidates.filter((candidate) => scores.has(candidate.id));
+    const scoredIds = new Set(scored.results.map((result) => result.id));
+    candidates = candidates.filter((candidate) => scoredIds.has(candidate.id));
   }
   const matches =
     input.dryRun && input.maxForget !== undefined
@@ -59,11 +59,15 @@ export async function forgetMatchingMemories(
 
   return {
     ...response,
+    matches,
     ...(input.reason ? { reason: input.reason } : {}),
     dryRun: input.dryRun,
     count: input.dryRun ? matches.length : response.count,
     forgetBatchId: null,
-    summary: `${input.dryRun ? "Matched" : "Forgot"} ${input.dryRun ? matches.length : response.count} memories.`,
+    summary:
+      response.errors.length > 0
+        ? `Processed ${response.count} memories with ${response.errors.length} failures.`
+        : `${input.dryRun ? "Matched" : "Forgot"} ${input.dryRun ? matches.length : response.count} memories.`,
     ...(input.dryRun ? { candidates: matches } : { forgotten: matches }),
   };
 }
