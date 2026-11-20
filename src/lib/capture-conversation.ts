@@ -11,11 +11,11 @@ const MAX_ENTITY_CONTEXT_CHARACTERS = 1_500;
 const SUPERMEMORY_ASSISTED_EXTRACTION_POLICY =
   "This turn used a Supermemory tool. Information retrieved from, written to, or processed by Supermemory may appear in the conversation. Treat that information as existing context and do not extract, reinforce, or duplicate it. Extract only additional new or corrected durable information explicitly provided by the current user that was not handled by the Supermemory tool. Do not use tool results or assistant responses as evidence.";
 
-function entityContextForTurn(
+function supportingContextForTurn(
   turn: CompletedConversationTurn,
-  configuredEntityContext?: string,
+  configuredSupportingContext?: string,
 ): string {
-  const baseContext = configuredEntityContext?.trim() || DEFAULT_CONVERSATION_ENTITY_CONTEXT;
+  const baseContext = configuredSupportingContext?.trim() || DEFAULT_CONVERSATION_ENTITY_CONTEXT;
   if (!turn.usedSupermemoryTool) return baseContext;
 
   const separator = "\n\n";
@@ -59,7 +59,10 @@ export async function captureCompletedTurn(
   const content = formatConversationTurn(turn);
   if (!content) return;
 
-  const entityContext = entityContextForTurn(turn, capture.entityContext);
+  const supportingContext = supportingContextForTurn(
+    turn,
+    capture.supportingContext ?? capture.entityContext,
+  );
   const sourceId = `conv_${context.session.id}`;
 
   try {
@@ -67,11 +70,11 @@ export async function captureCompletedTurn(
     await addDocument(
       client,
       {
-        containerTag: dependencies.containerTags.context,
+        namespace: dependencies.namespaces.context,
         content,
-        customId: sourceId,
+        id: sourceId,
         dreaming: capture.dreaming,
-        entityContext,
+        supportingContext,
         metadata: {
           ...capture.metadata,
           source_id: sourceId,

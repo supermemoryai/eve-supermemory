@@ -1,30 +1,31 @@
 import type Supermemory from "supermemory";
-import { z } from "zod";
-
-const addDocumentResponseSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-});
 
 export interface AddDocumentInput {
-  readonly containerTag: string;
+  readonly namespace: string;
   readonly content: string;
-  readonly customId: string;
+  readonly id: string;
   readonly dreaming: "dynamic" | "instant";
-  readonly entityContext?: string;
+  readonly supportingContext?: string;
   readonly metadata: Readonly<Record<string, string | number | boolean | readonly string[]>>;
   readonly taskType: "memory" | "superrag";
 }
 
 export async function addDocument(
   client: Supermemory,
-  input: AddDocumentInput,
-  signal: AbortSignal,
+  { namespace, metadata, ...input }: AddDocumentInput,
+  abortSignal: AbortSignal,
 ) {
-  return addDocumentResponseSchema.parse(
-    await client.post<unknown>("/v3/documents", {
-      body: input,
-      signal,
-    }),
+  return client.add(
+    namespace,
+    {
+      ...input,
+      metadata: Object.fromEntries(
+        Object.entries(metadata).map(([key, value]) => [
+          key,
+          typeof value === "object" ? [...value] : value,
+        ]),
+      ),
+    },
+    { abortSignal },
   );
 }

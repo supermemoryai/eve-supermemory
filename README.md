@@ -9,32 +9,28 @@ gives Eve tools to search, remember, extract, and forget.
 
 ## Add memory to Eve
 
-For Eve 1.0 RC5, install the matching provider candidate once it is published:
+This branch supports stable Eve 1.2.0 and Supermemory API v5 using SDK 5.1.2 or later.
+It is not published yet. The published `@next` version, `0.2.0-rc.1`, uses SDK 4;
+npm `latest` remains `0.1.3` for Eve 0.x. Neither published version contains this migration.
+
+To try this source before a release, build and pack it, then install the tarball in your Eve app:
 
 ```bash
-npm install @supermemory/eve@next eve@1.0.0-rc.5
+# In this repository
+npm ci
+npm pack
+
+# In your consuming application; use the actual tarball path
+npm install /path/to/supermemory-eve-0.2.0-rc.1.tgz eve@1.2.0
 ```
 
-The candidate `@supermemory/eve@0.2.0-rc.1` targets only the `next` tag. Until that
-release is approved and published, use a local build of this branch; `next` is not
-available yet. The default npm `latest` remains `0.1.3` for Eve 0.x consumers.
+Development pins Eve 1.2.0 exactly. The existing Eve 1.x peer range is retained; it already
+accepts stable 1.2.0. Eve remains a peer dependency rather than a bundled runtime.
+For an Eve 0.x application, keep `@supermemory/eve@0.1.3`.
 
-For an existing Eve 0.x application, keep the current provider:
-
-```bash
-npm install @supermemory/eve@0.1.3
-```
-
-`eve add memory/supermemory` installs from Eve's integration registry. For the 1.0
-candidate, use the explicit `@next` installation above until the registry selects a
-compatible release; don't assume the registry command upgrades the provider channel.
-
-This source targets Eve 1.0, starting with `eve@1.0.0-rc.5`. Development pins that release
-exactly. Set `SUPERMEMORY_API_KEY` from the
-[Supermemory console](https://console.supermemory.ai).
-
-For Eve 0.x, keep using `@supermemory/eve@0.1.3`. The 1.0-compatible provider no longer
-registers the post-compaction recall hook that Eve 1.0 rejects.
+`eve add memory/supermemory` uses Eve's integration registry, which may still install the
+published provider. Use the tarball above for this migration until a new release is approved.
+Set `SUPERMEMORY_API_KEY` from the [Supermemory console](https://console.supermemory.ai).
 
 Create a memory slot in the consuming Eve agent. `supermemory(...)` configures the provider;
 `defineMemory(...)` binds it to an Eve-managed scope.
@@ -68,7 +64,7 @@ memory is for.
 flowchart LR
   U[User] <--> E["Eve agent"]
 
-  subgraph SM["Supermemory · one container tag per memory scope"]
+  subgraph SM["Supermemory · one namespace per memory scope"]
     S["Session documents<br/>one document per agent session"]
     D["Source documents<br/>files, URLs, audio, video, and text"]
     M["Memories<br/>identity, preferences, decisions, and project context"]
@@ -90,7 +86,7 @@ transcribed for later reading. Memories are the smaller durable facts and decisi
 forms from those documents.
 
 Eve combines the slot's namespace and trusted scope into an opaque, locked memory-scope key. The
-provider derives its container tag from that key and uses it for every read and write. The
+provider derives its Supermemory namespace from that key and uses it for every read and write. The
 application decides whether the scope represents one user, a workspace, or another trusted
 boundary; the model cannot choose or change it.
 
@@ -105,7 +101,7 @@ When a turn uses a Supermemory tool, retrieved material is marked as existing co
 learned again from the assistant's response.
 
 Before each turn, the provider loads the user's current Supermemory profile and automatically
-searches for context relevant to the request. Eve 1.0 keeps recalled context outside conversation
+searches for context relevant to the request. Eve 1.x keeps recalled context outside conversation
 history, so compaction preserves it without calling a post-compaction recall hook. The agent can
 still use the search and read tools when it needs broader or source-level context.
 
@@ -162,9 +158,31 @@ export default defineMemory({
 });
 ```
 
-`capture.entityContext` can replace the default definition of durable context for products that
-need a different memory policy. The model cannot change caller identity, container routing, or
-capture policy at runtime.
+`capture.supportingContext` can replace the default definition of durable context. The existing
+`capture.entityContext` option remains an alias; `supportingContext` takes precedence if both are
+set. The model cannot change caller identity, namespace routing, or capture policy at runtime.
+
+## Upgrading an existing Eve 1.x installation
+
+Keep the Eve slot's `namespace`, scope resolver, and `containerTagPrefix` unchanged. The legacy
+prefix option keeps its name and default (`eve_agent`), but its values now identify v5 namespaces:
+`<prefix>_<opaque-scope-key>` for context and `<prefix>_extraction_<opaque-scope-key>` for sources.
+These are exactly the previous container-tag values. The provider does not move, copy, or delete
+existing data; v5 accesses the same namespace. Session and source IDs also stay unchanged.
+Do not change these settings to "migrate" an existing installation: that would select empty storage.
+
+Search keeps the existing `scope` and `customId` inputs and the `results[].documents[]` source
+references used by the read tools. The `documents` search scope now uses v5 chunk search. Read
+tools retain `customId`, `status`, and timestamp aliases while also returning v5 `system` details.
+Profiles read the text from v5's structured memory entries. Fields that v5 no longer exposes
+on document reads (`connectionId`, `taskType`, `source`, `url`, and `filepath`) are not fabricated
+in tool responses; the original stored data is not rewritten.
+
+Broad forgetting still previews first and finalizes only the exact confirmed IDs; it never
+re-runs the natural-language query to delete. `maxForget` caps the displayed preview. An optional
+`threshold` narrows it to up to 100 scored memory-search matches. V5 does not return candidate
+scores or batch IDs from topic previews; `forgetBatchId` is therefore null. Deletion `reason`
+inputs are returned to the caller, not persisted as server-side audit reasons in v5.
 
 ## Frequently asked questions
 
