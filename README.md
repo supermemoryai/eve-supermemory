@@ -9,28 +9,26 @@ gives Eve tools to search, remember, extract, and forget.
 
 ## Add memory to Eve
 
-This branch supports stable Eve 1.2.0 and Supermemory API v5 using SDK 5.1.2 or later.
-It is not published yet. The published `@next` version, `0.2.0-rc.1`, uses SDK 4;
-npm `latest` remains `0.1.3` for Eve 0.x. Neither published version contains this migration.
-
-To try this source before a release, build and pack it, then install the tarball in your Eve app:
-
 ```bash
-# In this repository
-npm ci
-npm pack
-
-# In your consuming application; use the actual tarball path
-npm install /path/to/supermemory-eve-0.2.0-rc.1.tgz eve@1.2.0
+npm install @supermemory/eve eve
 ```
 
-Development pins Eve 1.2.0 exactly. The existing Eve 1.x peer range is retained; it already
-accepts stable 1.2.0. Eve remains a peer dependency rather than a bundled runtime.
-For an Eve 0.x application, keep `@supermemory/eve@0.1.3`.
+Or let Eve install the package and write the memory slot for you:
 
-`eve add memory/supermemory` uses Eve's integration registry, which may still install the
-published provider. Use the tarball above for this migration until a new release is approved.
-Set `SUPERMEMORY_API_KEY` from the [Supermemory console](https://console.supermemory.ai).
+```bash
+eve add memory/supermemory
+```
+
+`@supermemory/eve` 0.2 supports Eve 1.x, from 1.0 through the current 1.2, and uses the
+Supermemory v5 API. Eve is a peer dependency, so your application's Eve runtime owns the memory
+lifecycle. Set `SUPERMEMORY_API_KEY` from the [Supermemory console](https://console.supermemory.ai).
+
+Still on Eve 0.x? Pin the previous provider. npm refuses to pair 0.2 with Eve 0.x instead of
+installing a mismatched runtime:
+
+```bash
+npm install @supermemory/eve@0.1.3
+```
 
 Create a memory slot in the consuming Eve agent. `supermemory(...)` configures the provider;
 `defineMemory(...)` binds it to an Eve-managed scope.
@@ -219,8 +217,8 @@ This package is a memory provider, not an Eve extension, so it has no extension 
 manifest to rebuild.
 
 Keep your memory slot name, explicit namespace, trusted scope resolver, and `containerTagPrefix`
-unchanged. The provider's container derivation, session document IDs, source metadata, and
-Supermemory SDK dependency are unchanged; it does not rewrite or migrate stored documents.
+unchanged. The provider derives the same storage partition, session document IDs, and source
+metadata as before; it does not rewrite or migrate stored documents.
 Eve's default namespace includes deployment identity, so changing the application root or
 Preview identity can still select a different partition. Preserve your existing identity rather
 than inventing a new namespace during the upgrade.
@@ -236,11 +234,10 @@ It needs no v26-to-v27 event conversion. Applications that archive Eve events th
 follow Eve's saved-history migration separately, retain their originals, and keep old deployments
 running for existing sessions as the upgrade guide requires.
 
-The release candidate is `0.2.0-rc.1`; merging this branch runs the existing release workflow
-and publishes it to `next`, not `latest`. Eve 0.x consumers stay on `0.1.3`. The `0.2.0-rc.1`
-prerelease is outside existing `^0.1.3` and `~0.1.3` ranges. Upgrading an agent to Eve 1.0 before
-installing the matching provider is unsupported. This separates the breaking runtime upgrade
-without changing stored memory or the existing stable release.
+`0.2.0` is the npm `latest` release. It is outside existing `^0.1.3` and `~0.1.3` ranges, so an
+Eve 0.x application keeps resolving `0.1.3` until you upgrade Eve and the provider together.
+Applications that installed a `0.2.0` release candidate receive `0.2.0` on their next update and
+keep their stored memory. Upgrading an agent to Eve 1.x without the matching provider is unsupported.
 
 ## Development
 
@@ -261,9 +258,10 @@ After checks and a packaged-import smoke test pass,
 the workflow publishes the version in `package.json` if it is not already on npm. Bump the
 package version and update `package-lock.json` to ship a new release; no Git tag is required.
 The workflow reads the npm tag from `publishConfig.tag`, permits only `next` and `latest`,
-and refuses to publish a prerelease to `latest`. The candidate sets `tag: "next"`. Keep that
-tag through RC validation; GA promotion and changing `latest` require a separate release decision.
-A local `npm publish --dry-run --tag next` checks the candidate without publishing it.
+and refuses to publish a prerelease to `latest`. Stable releases set `tag: "latest"`; a
+prerelease must set `tag: "next"`. The workflow does not move other dist-tags, so after a stable
+release a maintainer moves `next` with `npm dist-tag add @supermemory/eve@<version> next`.
+A local `npm publish --dry-run` checks the package without publishing it.
 
 Publishing uses npm trusted publishing with GitHub Actions OIDC; no `NPM_TOKEN` secret is needed.
 In the npm package's trusted publisher settings, select GitHub Actions, set the organization to
