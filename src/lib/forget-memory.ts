@@ -13,12 +13,10 @@ export async function forgetMemory(
   dependencies: SupermemoryDependencies,
 ) {
   const client = await dependencies.getClient();
-  return client.memories.forget(
-    {
-      containerTag: dependencies.containerTags.context,
-      id: input.memoryId,
-      ...(input.reason ? { reason: input.reason } : {}),
-    },
-    { signal: ctx.abortSignal },
+  const response = await client.memories.forget(
+    dependencies.namespaces.context,
+    { ids: [input.memoryId] },
+    { abortSignal: ctx.abortSignal },
   );
+  return { ...response, ...(input.reason ? { reason: input.reason } : {}) };
 }

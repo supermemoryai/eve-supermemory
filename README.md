@@ -9,32 +9,26 @@ gives Eve tools to search, remember, extract, and forget.
 
 ## Add memory to Eve
 
-For Eve 1.0 RC5, install the matching provider candidate once it is published:
-
 ```bash
-npm install @supermemory/eve@next eve@1.0.0-rc.5
+npm install @supermemory/eve eve
 ```
 
-The candidate `@supermemory/eve@0.2.0-rc.1` targets only the `next` tag. Until that
-release is approved and published, use a local build of this branch; `next` is not
-available yet. The default npm `latest` remains `0.1.3` for Eve 0.x consumers.
+Or let Eve install the package and write the memory slot for you:
 
-For an existing Eve 0.x application, keep the current provider:
+```bash
+eve add memory/supermemory
+```
+
+`@supermemory/eve` 0.2 supports Eve 1.x, from 1.0 through the current 1.2, and uses the
+Supermemory v5 API. Eve is a peer dependency, so your application's Eve runtime owns the memory
+lifecycle. Set `SUPERMEMORY_API_KEY` from the [Supermemory console](https://console.supermemory.ai).
+
+Still on Eve 0.x? Pin the previous provider. npm refuses to pair 0.2 with Eve 0.x instead of
+installing a mismatched runtime:
 
 ```bash
 npm install @supermemory/eve@0.1.3
 ```
-
-`eve add memory/supermemory` installs from Eve's integration registry. For the 1.0
-candidate, use the explicit `@next` installation above until the registry selects a
-compatible release; don't assume the registry command upgrades the provider channel.
-
-This source targets Eve 1.0, starting with `eve@1.0.0-rc.5`. Development pins that release
-exactly. Set `SUPERMEMORY_API_KEY` from the
-[Supermemory console](https://console.supermemory.ai).
-
-For Eve 0.x, keep using `@supermemory/eve@0.1.3`. The 1.0-compatible provider no longer
-registers the post-compaction recall hook that Eve 1.0 rejects.
 
 Create a memory slot in the consuming Eve agent. `supermemory(...)` configures the provider;
 `defineMemory(...)` binds it to an Eve-managed scope.
@@ -68,7 +62,7 @@ memory is for.
 flowchart LR
   U[User] <--> E["Eve agent"]
 
-  subgraph SM["Supermemory · one container tag per memory scope"]
+  subgraph SM["Supermemory · one namespace per memory scope"]
     S["Session documents<br/>one document per agent session"]
     D["Source documents<br/>files, URLs, audio, video, and text"]
     M["Memories<br/>identity, preferences, decisions, and project context"]
@@ -90,7 +84,7 @@ transcribed for later reading. Memories are the smaller durable facts and decisi
 forms from those documents.
 
 Eve combines the slot's namespace and trusted scope into an opaque, locked memory-scope key. The
-provider derives its container tag from that key and uses it for every read and write. The
+provider derives its Supermemory namespace from that key and uses it for every read and write. The
 application decides whether the scope represents one user, a workspace, or another trusted
 boundary; the model cannot choose or change it.
 
@@ -105,7 +99,7 @@ When a turn uses a Supermemory tool, retrieved material is marked as existing co
 learned again from the assistant's response.
 
 Before each turn, the provider loads the user's current Supermemory profile and automatically
-searches for context relevant to the request. Eve 1.0 keeps recalled context outside conversation
+searches for context relevant to the request. Eve 1.x keeps recalled context outside conversation
 history, so compaction preserves it without calling a post-compaction recall hook. The agent can
 still use the search and read tools when it needs broader or source-level context.
 
@@ -162,8 +156,9 @@ export default defineMemory({
 });
 ```
 
-`capture.entityContext` can replace the default definition of durable context for products that
-need a different memory policy.
+`capture.supportingContext` can replace the default definition of durable context. The existing
+`capture.entityContext` option remains an alias; `supportingContext` takes precedence if both are
+set. The model cannot change caller identity, namespace routing, or capture policy at runtime.
 
 ### Subagents and scheduled runs
 
@@ -191,8 +186,29 @@ supermemory({
 });
 ```
 
-The provider tools stay available in every session, because the model calls them on purpose. The model cannot change caller identity, container routing, or
-capture policy at runtime.
+The provider tools stay available in every session, because the model calls them on purpose.
+
+## Upgrading an existing Eve 1.x installation
+
+Keep the Eve slot's `namespace`, scope resolver, and `containerTagPrefix` unchanged. The legacy
+prefix option keeps its name and default (`eve_agent`), but its values now identify v5 namespaces:
+`<prefix>_<opaque-scope-key>` for context and `<prefix>_extraction_<opaque-scope-key>` for sources.
+These are exactly the previous container-tag values. The provider does not move, copy, or delete
+existing data; v5 accesses the same namespace. Session and source IDs also stay unchanged.
+Do not change these settings to "migrate" an existing installation: that would select empty storage.
+
+Search keeps the existing `scope` and `customId` inputs and the `results[].documents[]` source
+references used by the read tools. The `documents` search scope now uses v5 chunk search. Read
+tools retain `customId`, `status`, and timestamp aliases while also returning v5 `system` details.
+Profiles read the text from v5's structured memory entries. Fields that v5 no longer exposes
+on document reads (`connectionId`, `taskType`, `source`, `url`, and `filepath`) are not fabricated
+in tool responses; the original stored data is not rewritten.
+
+Broad forgetting still previews first and finalizes only the exact confirmed IDs; it never
+re-runs the natural-language query to delete. `maxForget` caps the displayed preview. An optional
+`threshold` narrows it to up to 100 scored memory-search matches. V5 does not return candidate
+scores or batch IDs from topic previews; `forgetBatchId` is therefore null. Deletion `reason`
+inputs are returned to the caller, not persisted as server-side audit reasons in v5.
 
 ## Frequently asked questions
 
@@ -229,8 +245,8 @@ This package is a memory provider, not an Eve extension, so it has no extension 
 manifest to rebuild.
 
 Keep your memory slot name, explicit namespace, trusted scope resolver, and `containerTagPrefix`
-unchanged. The provider's container derivation, session document IDs, source metadata, and
-Supermemory SDK dependency are unchanged; it does not rewrite or migrate stored documents.
+unchanged. The provider derives the same storage partition, session document IDs, and source
+metadata as before; it does not rewrite or migrate stored documents.
 Eve's default namespace includes deployment identity, so changing the application root or
 Preview identity can still select a different partition. Preserve your existing identity rather
 than inventing a new namespace during the upgrade.
@@ -246,11 +262,15 @@ It needs no v26-to-v27 event conversion. Applications that archive Eve events th
 follow Eve's saved-history migration separately, retain their originals, and keep old deployments
 running for existing sessions as the upgrade guide requires.
 
-The release candidate is `0.2.0-rc.1`; merging this branch runs the existing release workflow
-and publishes it to `next`, not `latest`. Eve 0.x consumers stay on `0.1.3`. The `0.2.0-rc.1`
-prerelease is outside existing `^0.1.3` and `~0.1.3` ranges. Upgrading an agent to Eve 1.0 before
-installing the matching provider is unsupported. This separates the breaking runtime upgrade
-without changing stored memory or the existing stable release.
+The `0.2` line is the npm `latest` release. It is outside existing `^0.1.3` and `~0.1.3` ranges, so an
+Eve 0.x application keeps resolving `0.1.3` until you upgrade Eve and the provider together.
+Applications that installed a `0.2.0` release candidate receive the current `0.2` release on their
+next update and keep their stored memory. Upgrading an agent to Eve 1.x without the matching
+provider is unsupported.
+
+From `0.2.1`, automatic recall and capture no longer run in child sessions and scheduled runs.
+Nothing already stored changes. Applications that relied on memory in those sessions set
+`captureSubagents` or `captureHeadless`; see [Subagents and scheduled runs](#subagents-and-scheduled-runs).
 
 ## Development
 
@@ -271,9 +291,10 @@ After checks and a packaged-import smoke test pass,
 the workflow publishes the version in `package.json` if it is not already on npm. Bump the
 package version and update `package-lock.json` to ship a new release; no Git tag is required.
 The workflow reads the npm tag from `publishConfig.tag`, permits only `next` and `latest`,
-and refuses to publish a prerelease to `latest`. The candidate sets `tag: "next"`. Keep that
-tag through RC validation; GA promotion and changing `latest` require a separate release decision.
-A local `npm publish --dry-run --tag next` checks the candidate without publishing it.
+and refuses to publish a prerelease to `latest`. Stable releases set `tag: "latest"`; a
+prerelease must set `tag: "next"`. The workflow does not move other dist-tags, so after a stable
+release a maintainer moves `next` with `npm dist-tag add @supermemory/eve@<version> next`.
+A local `npm publish --dry-run` checks the package without publishing it.
 
 Publishing uses npm trusted publishing with GitHub Actions OIDC; no `NPM_TOKEN` secret is needed.
 In the npm package's trusted publisher settings, select GitHub Actions, set the organization to

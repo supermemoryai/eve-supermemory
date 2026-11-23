@@ -35,7 +35,9 @@ export function createForgetMatchingTool(dependencies: SupermemoryDependencies) 
         .min(0)
         .max(1)
         .optional()
-        .describe("Optional similarity floor from 0 to 1. Higher values narrow the preview."),
+        .describe(
+          "Optional similarity floor from 0 to 1. Higher values narrow the preview to up to 100 scored matches.",
+        ),
       maxForget: z
         .number()
         .int()
@@ -48,7 +50,9 @@ export function createForgetMatchingTool(dependencies: SupermemoryDependencies) 
         .trim()
         .max(500)
         .optional()
-        .describe("An optional short reason recorded when memories are forgotten."),
+        .describe(
+          "An optional short reason returned with the result; v5 does not persist deletion reasons.",
+        ),
     }),
     execute(input, ctx) {
       return forgetMatchingMemories(input, ctx, dependencies);

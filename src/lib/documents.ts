@@ -11,16 +11,10 @@ export type DocumentContainer = (typeof DOCUMENT_CONTAINERS)[number];
 export async function accessibleDocument(
   client: Supermemory,
   documentId: string,
-  containerTag: string,
+  namespace: string,
   signal: AbortSignal,
 ) {
-  const document = await client.documents.get(documentId, { signal });
-
-  if (!document.containerTags?.includes(containerTag)) {
-    throw new Error("This document is not available in the selected container.");
-  }
-
-  return document;
+  return client.documents.get(namespace, documentId, {}, { abortSignal: signal });
 }
 
 function contentWindow(content: string, offset: number) {
@@ -56,36 +50,33 @@ export async function readStoredDocument(
   ctx: ToolContext,
   dependencies: SupermemoryDependencies,
 ) {
-  const containerTag =
+  const namespace =
     container === "agent_extraction"
-      ? dependencies.containerTags.extraction
-      : dependencies.containerTags.context;
+      ? dependencies.namespaces.extraction
+      : dependencies.namespaces.context;
   const client = await dependencies.getClient();
-  const document = await accessibleDocument(client, documentId, containerTag, ctx.abortSignal);
+  const document = await accessibleDocument(client, documentId, namespace, ctx.abortSignal);
   const details = {
     id: document.id,
-    customId: document.customId,
-    connectionId: document.connectionId,
+    customId:
+      typeof document.metadata.source_id === "string" ? document.metadata.source_id : document.id,
     title: document.title,
     type: document.type,
-    status: document.status,
-    taskType: document.taskType,
+    status: document.system.status,
     metadata: document.metadata,
     summary: document.summary,
-    source: document.source,
-    url: document.url,
-    filepath: document.filepath,
-    createdAt: document.createdAt,
-    updatedAt: document.updatedAt,
+    system: document.system,
+    createdAt: document.system.createdAt,
+    updatedAt: document.system.updatedAt,
   };
 
-  if (document.status !== "done" || document.content === null) {
+  if (document.system.status !== "done" || document.content === null) {
     return {
       ...details,
       content: null,
       offset,
       nextOffset: null,
-      totalCharacters: document.status === "done" ? 0 : null,
+      totalCharacters: document.system.status === "done" ? 0 : null,
     };
   }
 

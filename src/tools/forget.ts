@@ -20,7 +20,9 @@ export function createForgetTool(dependencies: SupermemoryDependencies) {
         .trim()
         .max(500)
         .optional()
-        .describe("An optional short reason recorded with the forgotten memory."),
+        .describe(
+          "An optional short reason returned with the result; v5 does not persist deletion reasons.",
+        ),
     }),
     execute(input, ctx) {
       return forgetMemory(input, ctx, dependencies);
