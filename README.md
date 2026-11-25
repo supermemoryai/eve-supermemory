@@ -160,6 +160,34 @@ export default defineMemory({
 `capture.entityContext` option remains an alias; `supportingContext` takes precedence if both are
 set. The model cannot change caller identity, namespace routing, or capture policy at runtime.
 
+### Subagents and scheduled runs
+
+Automatic recall and capture skip two kinds of session by default, so they make no Supermemory
+calls:
+
+- Child sessions, which Eve marks with `session.parent`: declared subagents, copies started by the
+  built-in `agent` tool, and `ctx.agent(...)` workflow calls. A remote agent's session carries the
+  parent link only when its `eveChannel({ trustedForwarders })` accepts the calling deployment.
+  A child keeps `session.parent` for its whole life, so turns a person sends to it by continuing
+  it with its `taskId` are skipped too unless `captureSubagents` is on.
+- Scheduled runs, which Eve marks with `session.schedule`. A later message from a person in the
+  same session clears that mark, so those turns are recalled and captured as usual. Approval and
+  input responses keep the mark. `captureHeadless` covers only these scheduled runs.
+
+To recall and capture them as before, set the matching option or environment variable. Each one
+turns on both recall and capture for its kind of session. The environment variable wins over the
+option in both directions when it is set to `true`, `1`, `yes`, `on` or `false`, `0`, `no`, `off`.
+
+```ts
+supermemory({
+  apiKey: () => process.env.SUPERMEMORY_API_KEY!,
+  captureSubagents: true, // or SUPERMEMORY_CAPTURE_SUBAGENTS=true
+  captureHeadless: true, // or SUPERMEMORY_CAPTURE_HEADLESS=true
+});
+```
+
+The provider tools stay available in every session, because the model calls them on purpose.
+
 ## Upgrading an existing Eve 1.x installation
 
 Keep the Eve slot's `namespace`, scope resolver, and `containerTagPrefix` unchanged. The legacy
@@ -234,10 +262,15 @@ It needs no v26-to-v27 event conversion. Applications that archive Eve events th
 follow Eve's saved-history migration separately, retain their originals, and keep old deployments
 running for existing sessions as the upgrade guide requires.
 
-`0.2.0` is the npm `latest` release. It is outside existing `^0.1.3` and `~0.1.3` ranges, so an
+The `0.2` line is the npm `latest` release. It is outside existing `^0.1.3` and `~0.1.3` ranges, so an
 Eve 0.x application keeps resolving `0.1.3` until you upgrade Eve and the provider together.
-Applications that installed a `0.2.0` release candidate receive `0.2.0` on their next update and
-keep their stored memory. Upgrading an agent to Eve 1.x without the matching provider is unsupported.
+Applications that installed a `0.2.0` release candidate receive the current `0.2` release on their
+next update and keep their stored memory. Upgrading an agent to Eve 1.x without the matching
+provider is unsupported.
+
+From `0.2.1`, automatic recall and capture no longer run in child sessions and scheduled runs.
+Nothing already stored changes. Applications that relied on memory in those sessions set
+`captureSubagents` or `captureHeadless`; see [Subagents and scheduled runs](#subagents-and-scheduled-runs).
 
 ## Development
 
